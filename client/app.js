@@ -40,30 +40,23 @@ function render() {
 function renderPlayer(pid, isTop) {
   const p = state.players[pid];
   const opp = pid !== me.id;
-
   const bf = pid===me.id ? $("#myBattlefield") : $("#oppBattlefield");
   const hand = pid===me.id ? $("#myHand") : $("#oppHand");
   const lib = pid===me.id ? $$('[data-zone="library"]')[0] : $("#oppLibrary");
   const gy = pid===me.id ? $$('[data-zone="graveyard"]')[0] : $("#oppGraveyard");
   const ex = pid===me.id ? $$('[data-zone="exile"]')[0] : $("#oppExile");
 
-  // clear
   [bf, hand, lib, gy, ex].forEach(el => { if (el) el.innerHTML = ""; });
-
-  // library, graveyard, exile show counters only
   if (lib) lib.textContent = `Library (${p.library.length})`;
   if (gy) gy.textContent = `Graveyard (${p.graveyard.length})`;
   if (ex) ex.textContent = `Exile (${p.exile.length})`;
 
-  // battlefield
   for (const cid of p.battlefield) {
     const c = cardEl(cid, pid);
     c.classList.toggle("tapped", state.cards[cid].tapped);
     c.onclick = () => sendAction("tap_toggle", { card_id: cid });
     bf.appendChild(c);
   }
-
-  // hand
   for (const cid of p.hand) {
     const c = cardEl(cid, pid);
     if (opp && !p.revealed_hand) c.classList.add("faceDown");
@@ -83,9 +76,19 @@ function normalizeImgPath(p) {
 
 function showZoom(url) {
   const z = $("#zoom"), img = $("#zoomImg");
-  img.src = url; z.classList.remove("hidden");
+  if (!z.classList.contains("hidden")) {
+    // If zoom is already open, close it
+    z.classList.add("hidden");
+    return;
+  }
+  img.src = url; 
+  z.classList.remove("hidden");
 }
 $("#zoom")?.addEventListener("click", () => $("#zoom").classList.add("hidden"));
+$("#zoom")?.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  $("#zoom").classList.add("hidden");
+});
 
 function cardEl(cid, ownerPid) {
   const card = state.cards[cid];
@@ -98,6 +101,11 @@ function cardEl(cid, ownerPid) {
     el.style.backgroundImage = `url('${url}')`;
     el.classList.add("hasImage");
     el.ondblclick = () => showZoom(url); // double click to zoom image
+    // Add mouse wheel zoom functionality
+    el.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      showZoom(url);
+    });
   }
 
   if (ownerPid === me.id) {
@@ -125,14 +133,71 @@ function setupDnD() {
 }
 
 function joinFlow() {
-  $("#btnJoin").onclick = () => {
+  // Load available decks on page load
+  loadAvailableDecks();
+  
+  $("#btnJoin").onclick = async () => {
     roomId = $("#room").value.trim() || "TEST";
     me.id = $("#seat").value;
     me.name = $("#name").value.trim() || (me.id === "A" ? "Player A" : "Player B");
-    $("#join").classList.add("hidden");
-    $("#table").classList.remove("hidden");
-    connect();
+    const selectedDeck = $("#deck").value;
+    
+    if (!selectedDeck) {
+      alert("Please select a deck");
+      return;
+    }
+    
+    // Join room with selected deck
+    try {
+      const response = await fetch("/api/join_room", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_id: roomId,
+          player_id: me.id,
+          deck: selectedDeck
+        })
+      });
+      
+      const result = await response.json();
+      if (!result.success) {
+        alert(result.error || "Failed to join room");
+        return;
+      }
+      
+      $("#join").classList.add("hidden");
+      $("#table").classList.remove("hidden");
+      connect();
+    } catch (error) {
+      alert("Error joining room: " + error.message);
+    }
   };
+}
+
+async function loadAvailableDecks() {
+  try {
+    const response = await fetch("/api/decks");
+    const data = await response.json();
+    const deckSelect = $("#deck");
+    
+    deckSelect.innerHTML = "";
+    if (data.decks && data.decks.length > 0) {
+      data.decks.forEach(deck => {
+        const option = document.createElement("option");
+        option.value = deck;
+        option.textContent = deck;
+        deckSelect.appendChild(option);
+      });
+    } else {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No decks available";
+      deckSelect.appendChild(option);
+    }
+  } catch (error) {
+    console.error("Failed to load decks:", error);
+    $("#deck").innerHTML = '<option value="">Error loading decks</option>';
+  }
 }
 
 function shortcuts() {

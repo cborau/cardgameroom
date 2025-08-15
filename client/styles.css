@@ -20,12 +20,12 @@ main { padding:0.8rem; display:grid; gap:1rem; }
 .zone { border:1px dashed #2a3246; min-height:64px; padding:6px; border-radius:10px; }
 .zone.big { min-height:200px; }
 .zoneRow { display:flex; gap:1rem; }
-#oppBattlefield, #myBattlefield { display:flex; gap:8px; flex-wrap:wrap; }
-#oppHand, #myHand { display:flex; gap:6px; min-height:96px; }
-.card { width:80px; height:112px; background:#1f2535; border:1px solid #2a3246; border-radius:8px; position:relative; display:flex; align-items:flex-end; padding:6px; cursor:grab; user-select:none; }
+#oppBattlefield, #myBattlefield { display:flex; gap:10px; flex-wrap:wrap; }
+#oppHand, #myHand { display:flex; gap:8px; min-height:160px; flex-wrap:wrap; }
+.card { width:140px; height:196px; background:#1f2535; border:1px solid #2a3246; border-radius:8px; position:relative; display:flex; align-items:flex-end; padding:6px; cursor:grab; user-select:none; }
 .card .label { font-size:12px; color:#e3e6ee; }
 .card.tapped { transform:rotate(90deg); transform-origin:center; }
-.card.faceDown { background:#0b0e16 url('/static/assets/cardback.PNG') center/cover no-repeat; }
+.card.faceDown { background:#0b0e16 url('/static/assets/card_back.PNG') center/cover no-repeat; }
 .card:active { cursor:grabbing; }
 .droptarget.highlight { outline:2px solid var(--accent); }
 .card.hasImage { background-size: cover; background-position: center; }

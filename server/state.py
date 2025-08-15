@@ -61,7 +61,6 @@ def apply_action(state: RoomState, action_type: str, p: Dict) -> RoomState:
         # move card between zones. zones: library, hand, battlefield, graveyard, exile
         cid = p["card_id"]; src = p["from"]; dst = p["to"]; pid = p["player_id"]
         zones = s.players[pid]
-        # remove from any zone if src == "any"
         sources = [src] if src != "any" else ["hand","battlefield","graveyard","exile","library"]
         removed = False
         for z in sources:

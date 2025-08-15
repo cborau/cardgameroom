@@ -11,15 +11,38 @@ DECKS_DIR.mkdir(parents=True, exist_ok=True)
 def _norm_image(path: str | None) -> str | None:
     if not path:
         return None
-    p = path.replace("\\", "/")
+    # Handle both single and double backslashes from JSON
+    p = path.replace("\\\\", "/").replace("\\", "/")
+    # Strip any embedded absolute path segments preceding an images directory
+    # Examples:
+    #   C:/..../images/uuid-0.jpg -> images/uuid-0.jpg
+    #   /images/C:/.../images/uuid-0.jpg -> images/uuid-0.jpg
+    lower = p.lower()
+    if "images/" in lower:
+        # Take only the last occurrence to get filename
+        parts = p.split("/")
+        for i in range(len(parts)-1, -1, -1):
+            if parts[i].lower().startswith("images"):
+                # if exact 'images' segment, take following filename part (if any)
+                if parts[i].lower() == "images" and i+1 < len(parts):
+                    p = f"/images/{parts[i+1]}"
+                else:
+                    # segment already includes filename after images/
+                    if parts[i].lower().startswith("images"):
+                        # rebuild from this segment ensuring leading slash
+                        seg = "/".join(parts[i:])
+                        if not seg.startswith("/"):
+                            seg = "/" + seg
+                        p = seg
+                break
     if p.startswith("http://") or p.startswith("https://"):
         return p
     if p.startswith("/images/"):
         return p
     if p.startswith("images/"):
-        return "/" + p              # -> "/images/..."
-    # fallback: assume it is a bare filename under /images
-    return "/images/" + p
+        return "/" + p
+    # fallback: treat as bare filename
+    return f"/images/{p.split('/')[-1]}"
 
 def save_room(state: RoomState):
     f = ROOMS_DIR / f"{state.room_id}.json"
