@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CardGameRoom MVP</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<div id="zoom" class="hidden"><img id="zoomImg" alt="Card preview"/></div>
+<body>
+  <div id="join">
+    <h1>Join Room</h1>
+    <label>Room ID <input id="room" placeholder="e.g. 4J7K" /></label>
+    <label>Your seat
+      <select id="seat">
+        <option value="A">A</option>
+        <option value="B">B</option>
+      </select>
+    </label>
+    <label>Name <input id="name" placeholder="Your name" /></label>
+    <button id="btnJoin">Join</button>
+    <p class="hint">Open a second browser tab, choose the same room and the other seat.</p>
+  </div>
+
+  <div id="table" class="hidden">
+    <header>
+      <div class="turn">Turn: <span id="turn"></span> | Phase: <span id="phase"></span></div>
+      <div class="controls">
+        <button data-act="draw">Draw (D)</button>
+        <button data-act="pass">Pass Turn (P)</button>
+        <button data-act="shuffle">Shuffle</button>
+        <button data-act="reveal">Reveal Hand</button>
+        <button data-act="save">Save</button>
+        <button data-act="load">Load</button>
+      </div>
+      <div class="life">
+        <div id="lifeA" class="lifeBox">
+          <div class="name" id="nameA"></div>
+          <button data-life="A,-1">−</button>
+          <span class="val" id="lifeValA">20</span>
+          <button data-life="A,1">+</button>
+        </div>
+        <div id="lifeB" class="lifeBox">
+          <div class="name" id="nameB"></div>
+          <button data-life="B,-1">−</button>
+          <span class="val" id="lifeValB">20</span>
+          <button data-life="B,1">+</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="opponentZones">
+        <h3>Opponent</h3>
+        <div class="zoneRow">
+          <div class="zone" id="oppLibrary">Library</div>
+          <div class="zone" id="oppGraveyard">Graveyard</div>
+          <div class="zone" id="oppExile">Exile</div>
+        </div>
+        <div class="zone" id="oppBattlefield">Battlefield</div>
+        <div class="zone" id="oppHand">Hand</div>
+      </section>
+
+      <section id="myZones">
+        <h3>Me</h3>
+        <div class="zoneRow">
+          <div class="zone droptarget" data-zone="library">Library</div>
+          <div class="zone droptarget" data-zone="graveyard">Graveyard</div>
+          <div class="zone droptarget" data-zone="exile">Exile</div>
+        </div>
+        <div class="zone droptarget big" data-zone="battlefield" id="myBattlefield">Battlefield</div>
+        <div class="zone droptarget" data-zone="hand" id="myHand">Hand</div>
+      </section>
+    </main>
+  </div>
+
+  <template id="cardTmpl">
+    <div class="card" draggable="true">
+      <div class="label"></div>
+    </div>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

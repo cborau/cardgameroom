@@ -1,0 +1,38 @@
+:root { --bg:#0f1115; --fg:#e8e8ea; --muted:#7a7f87; --accent:#7cc; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:system-ui,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--fg); }
+.hidden { display:none; }
+#join { max-width:420px; margin:6rem auto; padding:1.5rem; background:#161922; border:1px solid #222737; border-radius:14px; }
+#join label { display:block; margin:0.6rem 0; }
+#join input, #join select { width:100%; padding:0.6rem; background:#0e1016; color:var(--fg); border:1px solid #2a3246; border-radius:8px; }
+#join button { margin-top:0.8rem; width:100%; padding:0.7rem 1rem; border-radius:10px; border:1px solid #2a3246; background:#1b2030; color:var(--fg); cursor:pointer; }
+#join .hint { color:var(--muted); font-size:0.9rem; }
+
+header { padding:0.5rem 1rem; border-bottom:1px solid #222737; display:flex; gap:1rem; align-items:center; justify-content:space-between; }
+.turn { color:var(--accent); }
+.controls button { margin-right:0.4rem; padding:0.4rem 0.7rem; background:#192033; color:var(--fg); border:1px solid #2a3246; border-radius:8px; cursor:pointer; }
+.life { display:flex; gap:1rem; align-items:center; }
+.lifeBox { display:flex; align-items:center; gap:0.4rem; background:#141824; padding:0.3rem 0.6rem; border:1px solid #2a3246; border-radius:10px; }
+.lifeBox .name { color:var(--muted); margin-right:0.5rem; }
+.lifeBox button { width:28px; height:28px; border-radius:50%; border:1px solid #2a3246; background:#1b2030; color:var(--fg); }
+
+main { padding:0.8rem; display:grid; gap:1rem; }
+.zone { border:1px dashed #2a3246; min-height:64px; padding:6px; border-radius:10px; }
+.zone.big { min-height:200px; }
+.zoneRow { display:flex; gap:1rem; }
+#oppBattlefield, #myBattlefield { display:flex; gap:8px; flex-wrap:wrap; }
+#oppHand, #myHand { display:flex; gap:6px; min-height:96px; }
+.card { width:80px; height:112px; background:#1f2535; border:1px solid #2a3246; border-radius:8px; position:relative; display:flex; align-items:flex-end; padding:6px; cursor:grab; user-select:none; }
+.card .label { font-size:12px; color:#e3e6ee; }
+.card.tapped { transform:rotate(90deg); transform-origin:center; }
+.card.faceDown { background:#0b0e16 url('/static/assets/cardback.PNG') center/cover no-repeat; }
+.card:active { cursor:grabbing; }
+.droptarget.highlight { outline:2px solid var(--accent); }
+.card.hasImage { background-size: cover; background-position: center; }
+.card.hasImage .label { display: none; }
+
+#zoom { position: fixed; inset:0; background:rgba(0,0,0,0.8);
+        display:flex; align-items:center; justify-content:center; z-index:1000; }
+#zoom.hidden { display:none; }
+#zoom img { max-width: min(90vw, 700px); max-height: 90vh; border-radius:12px; }
+
