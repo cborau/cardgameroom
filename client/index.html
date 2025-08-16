@@ -53,6 +53,13 @@
             <div class="info name" id="nameB"></div>
             <div class="info wins" id="winsB"></div>
             <div class="info life" id="lifeB"></div>
+            <div class="info slider" id="sliderBoxB">
+              <label class="miniLabel">Card size</label>
+              <div class="sliderRow">
+                <input type="range" id="scaleBSlider" min="30" max="100" value="100" step="1" />
+                <span class="sizeVal" id="scaleBVal">100%</span>
+              </div>
+            </div>
           </div>
           <div class="zone big" id="oppBattlefield"><span class="zoneLabel">Battlefield</span></div>
         </div>
@@ -79,6 +86,13 @@
               <span id="lifeValA">20</span>
               <button data-life="A,1">+</button>
             </div>
+            <div class="info slider" id="sliderBoxA">
+              <label class="miniLabel">Card size</label>
+              <div class="sliderRow">
+                <input type="range" id="scaleASlider" min="30" max="100" value="100" step="1" />
+                <span class="sizeVal" id="scaleAVal">100%</span>
+              </div>
+            </div>            
           </div>
 
           <div class="zone big droptarget" data-zone="battlefield" id="myBattlefield">

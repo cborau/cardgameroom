@@ -267,3 +267,87 @@ function showZoom(url) {
 }
 $("#zoom").addEventListener("click", () => $("#zoom").classList.add("hidden"));
 $("#zoom").addEventListener("wheel", e => { e.preventDefault(); $("#zoom").classList.add("hidden"); });
+
+// === Card sizing controls =====================================================
+(() => {
+  const zones = {
+    A: {
+      hand: document.getElementById('myHand'),
+      bf:   document.getElementById('myBattlefield'),
+      slider: document.getElementById('scaleASlider'),
+      readout: document.getElementById('scaleAVal'),
+    },
+    B: {
+      hand: document.getElementById('oppHand'),
+      bf:   document.getElementById('oppBattlefield'),
+      slider: document.getElementById('scaleBSlider'),
+      readout: document.getElementById('scaleBVal'),
+    }
+  };
+
+  // Current percentage for each player, clamp to [30, 100]
+  const scalePct = { A: 100, B: 100 };
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v|0));
+
+  // Compute card height in pixels from zone height and slider percentage.
+  function setZoneCardHeight(zoneEl, pct) {
+    if (!zoneEl) return;
+    // clientHeight includes padding, excludes border; subtract the vertical padding you use in .zone (6px top + 6px bottom)
+    const innerH = Math.max(0, zoneEl.clientHeight - 12);
+    // Never exceed the zone height, never go negative, give a tiny floor to avoid 0px when toggling visibility
+    const px = Math.max(16, Math.floor(innerH * (clamp(pct, 30, 100) / 100)));
+    zoneEl.style.setProperty('--card-h', px + 'px');
+  }
+
+  function applyScale(who, pct) {
+    scalePct[who] = clamp(pct, 30, 100);
+    const z = zones[who];
+    setZoneCardHeight(z.hand, scalePct[who]);
+    setZoneCardHeight(z.bf,   scalePct[who]);
+    if (z.readout) z.readout.textContent = scalePct[who] + '%';
+  }
+
+  // Recalculate all zones, used on resize or layout changes
+  function recalcAll() {
+    applyScale('A', scalePct.A);
+    applyScale('B', scalePct.B);
+  }
+
+  // Hook sliders
+  ['A','B'].forEach(who => {
+    const z = zones[who];
+    if (z && z.slider) {
+      z.slider.addEventListener('input', (e) => {
+        const val = clamp(parseInt(e.target.value || '100', 10), 30, 100);
+        applyScale(who, val);
+      });
+    }
+  });
+
+  // Keep sizes fresh when zones change size for any reason
+  const ro = new ResizeObserver(entries => {
+    for (const entry of entries) {
+      const el = entry.target;
+      // Detect which player's zone this is
+      const who = (el.id.startsWith('my')) ? 'A' : 'B';
+      const pct = scalePct[who];
+      setZoneCardHeight(el, pct);
+    }
+  });
+
+  // Observe only the big zones we size
+  if (zones.A.hand) ro.observe(zones.A.hand);
+  if (zones.A.bf)   ro.observe(zones.A.bf);
+  if (zones.B.hand) ro.observe(zones.B.hand);
+  if (zones.B.bf)   ro.observe(zones.B.bf);
+
+  // Recompute on viewport resize. This covers moving the window to a larger screen.
+  window.addEventListener('resize', recalcAll);
+
+  // Initial sizing. Run now, and again shortly after to catch late layout.
+  window.addEventListener('load', () => {
+    recalcAll();
+    setTimeout(recalcAll, 150);
+    setTimeout(recalcAll, 400);
+  });
+})();

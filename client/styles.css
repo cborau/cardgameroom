@@ -70,14 +70,53 @@ main {
 
 .card { width:140px; height:196px; background:#1f2535; border:1px solid #2a3246; border-radius:8px; position:relative; display:flex; align-items:flex-end; padding:6px; cursor:grab; user-select:none; }
 
-/* Cards in hand zones should be smaller to fit better */
-#myHand .card, #oppHand .card {
-  height: calc(100% - 20px); /* Fit the available vertical space minus some padding */
-  max-height: 150px; /* But don't exceed this height */
-  min-height: 100px; /* And don't go below this height */
+/* Big zones use a CSS variable so cards fill vertically by default.
+   JS sets --card-h based on zone height and the slider. */
+.zone.big { --card-h: 100%; }
+
+/* In big zones, cards use the zone-driven height and preserve the aspect ratio. */
+.zone.big .card {
+  height: min(var(--card-h, 100%), 100%);
   width: auto;
-  aspect-ratio: 5/7; /* Maintain card proportions */
+  aspect-ratio: 5 / 7;
+  /* let the default .card styles apply for borders, radius, etc. */
 }
+
+/* Small slider styling */
+.info.slider {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info.slider .miniLabel {
+  position: absolute;
+  left: 10px;
+  top: -10px;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.45);
+  padding: 1px 6px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sizeVal { color: var(--muted); font-size: 12px; min-width: 40px; text-align: right; }
+
+/* optional: consistent look for range inputs */
+input[type="range"] {
+  width: 100%;
+  accent-color: #77cccc;
+}
+
 .card .label { font-size:12px; color:#e3e6ee; }
 .card.tapped { transform:rotate(90deg); transform-origin:center; }
 .card.faceDown { background:#0b0e16 url('/static/assets/cardback.png') center/cover no-repeat; }
