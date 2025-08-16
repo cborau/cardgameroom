@@ -172,6 +172,9 @@ function zoneThumb(el, ids, _label, {showBack=false, clickable=false} = {}) {
 function render() {
   if (!state) return;
   const A = state.players.A, B = state.players.B;
+  const self = (me && me.id === 'B') ? B : A;
+  const opp  = (me && me.id === 'B') ? A : B;
+
 
   $("#turn").textContent = state.turn === "A" ? (A.name || "Me") : (B.name || "Opponent");
   $("#phase").textContent = state.phase;
@@ -184,18 +187,19 @@ function render() {
   $("#lifeB").textContent = `Life: ${B.life}`;
 
   // Opponent zones
-  zoneThumb($("#oppLibrary"), B.library, "Library", {showBack:true});
-  zoneThumb($("#oppExile"),   B.exile,   "Exile");
-  zoneThumb($("#oppGraveyard"), B.graveyard, "Graveyard");
+  zoneThumb($("#oppLibrary"), opp.library, "Library", {showBack:true});
+  zoneThumb($("#oppExile"),   opp.exile,   "Exile");
+  zoneThumb($("#oppGraveyard"), opp.graveyard, "Graveyard");
 
   const oppBF = $("#oppBattlefield"); clearZone(oppBF);
-  
-  B.battlefield.forEach(cid => {
-    const el = makeCardEl(cid, "B");
+  opp.battlefield.forEach(cid => {
+    const el = makeCardEl(cid, (me && me.id === "B") ? "A" : "B");
     applyCardPos(el, state.cards[cid] && state.cards[cid].pos);
     oppBF.appendChild(el);
-  });const oppHand = $("#oppHand"); clearZone(oppHand);
-  B.hand.forEach(_cid => {
+  });
+
+  const oppHand = $("#oppHand"); clearZone(oppHand);
+  opp.hand.forEach(_cid => {
     const el = document.createElement("div");
     el.className = "card faceDown";
     oppHand.appendChild(el);
@@ -203,22 +207,24 @@ function render() {
 
   // My zones
   const lib = $("#myLibrary"); lib.dataset.zone = "library";
-  zoneThumb(lib, A.library, "Library", {showBack:true, clickable:true});
+  zoneThumb(lib, self.library, "Library", {showBack:true, clickable:true});
 
   const exi = $("#myExile"); exi.dataset.zone = "exile";
   zoneThumb(exi, A.exile, "Exile", {clickable:true});
 
   const gry = $("#myGraveyard"); gry.dataset.zone = "graveyard";
-  zoneThumb(gry, A.graveyard, "Graveyard", {clickable:true});
+  zoneThumb(gry, self.graveyard, "Graveyard", {clickable:true});
 
   const myBF = $("#myBattlefield"); clearZone(myBF);
-  
-  A.battlefield.forEach(cid => {
-    const el = makeCardEl(cid, "A");
+  self.battlefield.forEach(cid => {
+    const el = makeCardEl(cid, me.id || "A");
     applyCardPos(el, state.cards[cid] && state.cards[cid].pos);
     myBF.appendChild(el);
-  });const myHand = $("#myHand"); clearZone(myHand);
-  A.hand.forEach(cid => myHand.appendChild(makeCardEl(cid, "A")));
+  });
+
+  const myHand = $("#myHand"); clearZone(myHand);
+  self.hand.forEach(cid => myHand.appendChild(makeCardEl(cid, me.id || "A")));
+
 }
 
 // DnD targets (unchanged)

@@ -87,30 +87,41 @@ async def http_load(room_id: str):
 async def ws_room(ws: WebSocket, room_id: str):
     await ws.accept()
     try:
+        # First message must be the hello payload
         hello = ClientHello(**json.loads(await ws.receive_text()))
 
         ctx = rooms.get(room_id)
         if ctx is None:
-            # Pick decks. If the first joiner sent a deck, use it for that seat.
-            deckA_name = hello.deck if hello.player_id == "A" and hello.deck else "A"
-            deckB_name = hello.deck if hello.player_id == "B" and hello.deck else "B"
-            st = new_room(room_id, load_deck(deckA_name), load_deck(deckB_name))
+            # First joiner: only load a deck for the seat that joined (no placeholders)
+            deckA = load_deck(hello.deck) if (hello.player_id == "A" and hello.deck) else None
+            deckB = load_deck(hello.deck) if (hello.player_id == "B" and hello.deck) else None
+            st = new_room(room_id, deckA, deckB)
             if hello.name:
                 st.players[hello.player_id].name = hello.name
             ctx = rooms[room_id] = {"state": st, "peers": set()}
         else:
-            # If player provided a deck and their library is empty, load it now.
+            # Later joiners: if they provide a deck, replace their zones with the real deck
             if hello.deck:
                 st = ctx["state"]  # type: ignore[assignment]
-                if not st.players[hello.player_id].library:
-                    deck = load_deck(hello.deck)
-                    st.players[hello.player_id].library = []
-                    # append new cards into room state
-                    for d in deck:
-                        from .state import _mk_card  # local helper
-                        c = _mk_card(d)
-                        st.cards[c.id] = c
-                        st.players[hello.player_id].library.append(c.id)
+                pl = st.players[hello.player_id]
+                deck = load_deck(hello.deck)
+
+                # Clear player zones
+                pl.library = []
+                pl.hand = []
+                pl.battlefield = []
+                pl.graveyard = []
+                pl.exile = []
+
+                # Fill their library with new CardInstances and shuffle
+                from .state import _mk_card
+                for d in deck:
+                    c = _mk_card(d)
+                    st.cards[c.id] = c
+                    pl.library.append(c.id)
+
+                import random
+                random.shuffle(pl.library)
 
             if hello.name:
                 try:
@@ -118,8 +129,23 @@ async def ws_room(ws: WebSocket, room_id: str):
                 except Exception:
                     pass
 
+        # Register, send current state, then serve the loop
         ctx["peers"].add(ws)  # type: ignore[index]
-        await ws.send_json(_model_dump(ServerState(kind="state", state=ctx["state"])))  # type: ignore[index]
+        await ws.send_json(_model_dump(ServerState(kind="state", state=ctx["state"])))
+
+        async def _broadcast(room_id: str):
+            data = _model_dump(ServerState(kind="state", state=rooms[room_id]["state"]))  # type: ignore[index]
+            dead = []
+            for peer in list(rooms[room_id]["peers"]):  # type: ignore[index]
+                try:
+                    await peer.send_json(data)
+                except Exception:
+                    dead.append(peer)
+            for d in dead:
+                try:
+                    rooms[room_id]["peers"].discard(d)  # type: ignore[index]
+                except Exception:
+                    pass
 
         while True:
             raw = await ws.receive_text()
@@ -136,3 +162,4 @@ async def ws_room(ws: WebSocket, room_id: str):
             rooms.get(room_id, {}).get("peers", set()).discard(ws)  # type: ignore[union-attr]
         except Exception:
             pass
+
