@@ -110,8 +110,14 @@ function makeCardEl(cid, ownerPid) {
     e.dataTransfer.setData("text/plain", JSON.stringify({ card_id: cid, owner: ownerPid }));
   });
 
-  // tap/untap with Alt+Click
-  el.addEventListener("click", e => { if (e.altKey) sendAction("tap_toggle", { card_id: cid }); });
+  // tap/untap with simple click on battlefield cards
+  el.addEventListener("click", e => {
+    // Only tap if the card is on the battlefield (not in hand or other zones)
+    const battlefield = e.target.closest('#myBattlefield') || e.target.closest('#oppBattlefield');
+    if (battlefield && ownerPid === me.id) {
+      sendAction("tap_toggle", { card_id: cid });
+    }
+  });
   return el;
 }
 

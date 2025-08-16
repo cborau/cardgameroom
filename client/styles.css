@@ -1,6 +1,6 @@
 :root { --bg:#0f1115; --fg:#e8e8ea; --muted:#8790a0; --accent:#7cc; }
 * { box-sizing:border-box; }
-body { margin:0; font-family:system-ui,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--fg); }
+body { margin:0; font-family:system-ui,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--fg); height:100vh; overflow:hidden; }
 .hidden { display:none; }
 
 #join { max-width:420px; margin:6rem auto; padding:1.2rem; background:#161922; border:1px solid #222737; border-radius:14px; }
@@ -13,19 +13,53 @@ header { padding:0.6rem 1rem; border-bottom:1px solid #222737; display:flex; ali
 .turn { color:var(--accent); }
 .controls button { margin-right:0.4rem; padding:0.4rem 0.7rem; border:1px solid #2a3246; background:#1b2030; color:var(--fg); border-radius:8px; cursor:pointer; }
 
-main { padding:0.8rem; display:grid; gap:1.5rem; }
+main { 
+  padding:0.8rem; 
+  display:grid; 
+  gap:1.5rem; 
+  height: calc(100vh - 80px); /* Full height minus header */
+  overflow: hidden;
+}
+
+.playerArea {
+  height: calc(50vh - 40px); /* Each player area takes half the remaining space */
+}
 .playerArea h3 { margin:0 0 0.5rem 2px; color:var(--muted); font-weight:600; }
 
 .grid3 {
   display:grid;
-  grid-template-columns: 240px 220px 1fr;
-  grid-template-rows: 230px 230px;
+  grid-template-columns: 168px 154px 1fr; /* Reduced from 240px 220px to 70% */
+  grid-template-rows: 1fr 1fr;
   gap: 12px;
+  height: 100%;
 }
 
-.zone { border:1px dashed #2a3246; border-radius:10px; padding:6px; position:relative; min-height:64px; }
-.zone.big { min-height:200px; display:flex; flex-wrap:wrap; gap:10px; align-content:flex-start; }
-.zone.thumb { background:#121726; display:flex; align-items:center; justify-content:center; color:var(--muted); }
+.zone { 
+  border:1px dashed #2a3246; 
+  border-radius:10px; 
+  padding:6px; 
+  position:relative; 
+  min-height:64px; 
+  overflow: hidden;
+}
+
+.zone.big { 
+  min-height:200px; 
+  display:flex; 
+  flex-wrap:wrap; 
+  gap:10px; 
+  align-content:flex-start; 
+  overflow-y: auto; /* Make zones scrollable */
+  overflow-x: hidden;
+}
+
+.zone.thumb { 
+  background:#121726; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+  color:var(--muted); 
+}
 .zone.thumb .thumbCount { position:absolute; top:6px; right:8px; font-size:12px; color:#cfd6e6; background:rgba(0,0,0,0.4); padding:1px 6px; border-radius:10px; }
 
 .stack { display:flex; flex-direction:column; gap:10px; }
@@ -35,6 +69,15 @@ main { padding:0.8rem; display:grid; gap:1.5rem; }
 .spacer { height:100%; }
 
 .card { width:140px; height:196px; background:#1f2535; border:1px solid #2a3246; border-radius:8px; position:relative; display:flex; align-items:flex-end; padding:6px; cursor:grab; user-select:none; }
+
+/* Cards in hand zones should be smaller to fit better */
+#myHand .card, #oppHand .card {
+  height: calc(100% - 20px); /* Fit the available vertical space minus some padding */
+  max-height: 150px; /* But don't exceed this height */
+  min-height: 100px; /* And don't go below this height */
+  width: auto;
+  aspect-ratio: 5/7; /* Maintain card proportions */
+}
 .card .label { font-size:12px; color:#e3e6ee; }
 .card.tapped { transform:rotate(90deg); transform-origin:center; }
 .card.faceDown { background:#0b0e16 url('/static/assets/cardback.png') center/cover no-repeat; }
@@ -86,5 +129,24 @@ main { padding:0.8rem; display:grid; gap:1.5rem; }
   padding: 1px 6px;
   border-radius: 8px;
   pointer-events: none;
+}
+
+/* Custom scrollbar styling for dark theme */
+.zone.big::-webkit-scrollbar {
+  width: 8px;
+}
+
+.zone.big::-webkit-scrollbar-track {
+  background: rgba(42, 50, 70, 0.3);
+  border-radius: 4px;
+}
+
+.zone.big::-webkit-scrollbar-thumb {
+  background: rgba(119, 204, 204, 0.4);
+  border-radius: 4px;
+}
+
+.zone.big::-webkit-scrollbar-thumb:hover {
+  background: rgba(119, 204, 204, 0.6);
 }
 
