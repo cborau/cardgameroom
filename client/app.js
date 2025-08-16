@@ -89,6 +89,8 @@ function makeCardEl(cid, ownerPid) {
   const c = state.cards[cid];
   const el = document.createElement("div");
   el.className = "card";
+  el.dataset.id = String(cid);
+  el.dataset.name = c.name || "";
   el.title = c.name;
   const label = document.createElement("div");
   label.className = "label";
@@ -119,6 +121,20 @@ function makeCardEl(cid, ownerPid) {
     }
   });
   return el;
+}
+
+// Apply absolute position from card state (used for battlefield)
+function applyCardPos(el, pos) {
+  if (!el) return;
+  if (pos && typeof pos.x === "number" && typeof pos.y === "number") {
+    el.style.setProperty('--x', pos.x + 'px');
+    el.style.setProperty('--y', pos.y + 'px');
+    el.style.setProperty('--z', String(pos.z || 1));
+  } else {
+    el.style.removeProperty('--x');
+    el.style.removeProperty('--y');
+    el.style.removeProperty('--z');
+  }
 }
 
 // Only clear dynamic children; preserve the .zoneLabel element
@@ -173,9 +189,12 @@ function render() {
   zoneThumb($("#oppGraveyard"), B.graveyard, "Graveyard");
 
   const oppBF = $("#oppBattlefield"); clearZone(oppBF);
-  B.battlefield.forEach(cid => oppBF.appendChild(makeCardEl(cid, "B")));
-
-  const oppHand = $("#oppHand"); clearZone(oppHand);
+  
+  B.battlefield.forEach(cid => {
+    const el = makeCardEl(cid, "B");
+    applyCardPos(el, state.cards[cid] && state.cards[cid].pos);
+    oppBF.appendChild(el);
+  });const oppHand = $("#oppHand"); clearZone(oppHand);
   B.hand.forEach(_cid => {
     const el = document.createElement("div");
     el.className = "card faceDown";
@@ -193,9 +212,12 @@ function render() {
   zoneThumb(gry, A.graveyard, "Graveyard", {clickable:true});
 
   const myBF = $("#myBattlefield"); clearZone(myBF);
-  A.battlefield.forEach(cid => myBF.appendChild(makeCardEl(cid, "A")));
-
-  const myHand = $("#myHand"); clearZone(myHand);
+  
+  A.battlefield.forEach(cid => {
+    const el = makeCardEl(cid, "A");
+    applyCardPos(el, state.cards[cid] && state.cards[cid].pos);
+    myBF.appendChild(el);
+  });const myHand = $("#myHand"); clearZone(myHand);
   A.hand.forEach(cid => myHand.appendChild(makeCardEl(cid, "A")));
 }
 
@@ -211,6 +233,62 @@ function setupDnD() {
       if (!data) return;
       const to = zone.dataset.zone;
       sendAction("move", { player_id: me.id, card_id: data.card_id, to });
+      // Also set absolute position when dropping on battlefield
+
+      if (to === "battlefield") {
+        const rect = zone.getBoundingClientRect();
+        const hCss = getComputedStyle(zone).getPropertyValue('--card-h').trim();
+        let h = parseFloat(hCss);
+        if (!isFinite(h) || h <= 0) h = Math.max(16, zone.clientHeight * 0.95);
+        const w = Math.round(h * 5 / 7);
+        let x = e.clientX - rect.left - w / 2;
+        let y = e.clientY - rect.top  - h / 2;
+
+        // Snap-stack logic: if dropping near an existing card center, or Shift is held, offset onto that stack
+        try {
+          const cards = Array.from(zone.querySelectorAll('.card'));
+          const px = e.clientX - rect.left;
+          const py = e.clientY - rect.top;
+          let anchor = null, bestD = Infinity;
+          const radius = 36;
+          const name = (window.state && window.state.cards && window.state.cards[data.card_id] && window.state.cards[data.card_id].name) || '';
+
+          for (const c of cards) {
+            // Skip if it's the same card being moved within BF before DOM updates
+            const cidAttr = c.getAttribute('data-id');
+            if (cidAttr && cidAttr === String(data.card_id)) continue;
+            const cx = parseFloat(c.style.getPropertyValue('--x') || '0') + w/2;
+            const cy = parseFloat(c.style.getPropertyValue('--y') || '0') + h/2;
+            const d = Math.hypot(px - cx, py - cy);
+            const same = name && c.title && c.title === name;
+            if ((same && d < radius) || (e.shiftKey && d < radius)) {
+              if (d < bestD) { bestD = d; anchor = c; }
+            }
+          }
+
+          if (anchor) {
+            // Count existing cards near anchor to offset
+            let depth = 0;
+            for (const c of cards) {
+              const ax = parseFloat(anchor.style.getPropertyValue('--x') || '0');
+              const ay = parseFloat(anchor.style.getPropertyValue('--y') || '0');
+              const ox = parseFloat(c.style.getPropertyValue('--x') || '0');
+              const oy = parseFloat(c.style.getPropertyValue('--y') || '0');
+              if (Math.hypot(ox - ax, oy - ay) < 28) depth++;
+            }
+            const off = 18 * 0.7;
+            x = parseFloat(anchor.style.getPropertyValue('--x') || '0') + depth * off;
+            y = parseFloat(anchor.style.getPropertyValue('--y') || '0') + depth * off;
+          }
+        } catch {}
+
+        // Clamp and send
+        x = Math.max(0, Math.min(x, rect.width  - w));
+        y = Math.max(0, Math.min(y, rect.height - h));
+        const z = Date.now() % 1000000;
+        sendAction("set_card_pos", { card_id: data.card_id, x: Math.round(x), y: Math.round(y), z });
+      }
+
     });
   });
 }
@@ -285,16 +363,12 @@ $("#zoom").addEventListener("wheel", e => { e.preventDefault(); $("#zoom").class
     }
   };
 
-  // Current percentage for each player, clamp to [30, 100]
   const scalePct = { A: 100, B: 100 };
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v|0));
 
-  // Compute card height in pixels from zone height and slider percentage.
   function setZoneCardHeight(zoneEl, pct) {
     if (!zoneEl) return;
-    // clientHeight includes padding, excludes border; subtract the vertical padding you use in .zone (6px top + 6px bottom)
     const innerH = Math.max(0, zoneEl.clientHeight - 12);
-    // Never exceed the zone height, never go negative, give a tiny floor to avoid 0px when toggling visibility
     const px = Math.max(16, Math.floor(innerH * (clamp(pct, 30, 100) / 100)));
     zoneEl.style.setProperty('--card-h', px + 'px');
   }
@@ -307,13 +381,11 @@ $("#zoom").addEventListener("wheel", e => { e.preventDefault(); $("#zoom").class
     if (z.readout) z.readout.textContent = scalePct[who] + '%';
   }
 
-  // Recalculate all zones, used on resize or layout changes
   function recalcAll() {
     applyScale('A', scalePct.A);
     applyScale('B', scalePct.B);
   }
 
-  // Hook sliders
   ['A','B'].forEach(who => {
     const z = zones[who];
     if (z && z.slider) {
@@ -324,27 +396,22 @@ $("#zoom").addEventListener("wheel", e => { e.preventDefault(); $("#zoom").class
     }
   });
 
-  // Keep sizes fresh when zones change size for any reason
   const ro = new ResizeObserver(entries => {
     for (const entry of entries) {
       const el = entry.target;
-      // Detect which player's zone this is
       const who = (el.id.startsWith('my')) ? 'A' : 'B';
       const pct = scalePct[who];
       setZoneCardHeight(el, pct);
     }
   });
 
-  // Observe only the big zones we size
   if (zones.A.hand) ro.observe(zones.A.hand);
   if (zones.A.bf)   ro.observe(zones.A.bf);
   if (zones.B.hand) ro.observe(zones.B.hand);
   if (zones.B.bf)   ro.observe(zones.B.bf);
 
-  // Recompute on viewport resize. This covers moving the window to a larger screen.
   window.addEventListener('resize', recalcAll);
 
-  // Initial sizing. Run now, and again shortly after to catch late layout.
   window.addEventListener('load', () => {
     recalcAll();
     setTimeout(recalcAll, 150);

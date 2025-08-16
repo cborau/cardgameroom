@@ -58,7 +58,16 @@ def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
                 arr.remove(cid)
                 break
         getattr(pl, to).append(cid)
+
+        # Position handling: only relevant on battlefield
+        if to != "battlefield":
+            if cid in s.cards:
+                s.cards[cid].pos = None
+        else:
+            if cid in s.cards and not s.cards[cid].pos:
+                s.cards[cid].pos = {"x": 0, "y": 0, "z": 1}
         return s
+
     if action_type == "tap_toggle":
         cid = p["card_id"]
         s.cards[cid].tapped = not s.cards[cid].tapped
@@ -90,4 +99,11 @@ def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
         pl.hand, other[:] = other[:], pl.hand[:]
         setattr(pl, zone, other)
         return s
+    if action_type == "set_card_pos":
+        cid = p["card_id"]
+        if cid in s.cards:
+            x = int(p.get("x", 0)); y = int(p.get("y", 0)); z = int(p.get("z", 1))
+            s.cards[cid].pos = {"x": x, "y": y, "z": z}
+        return s
+
     return s

@@ -12,6 +12,7 @@ class CardInstance(BaseModel):
     scryfall_id: Optional[str] = None
     set: Optional[str] = None
     collector_number: Optional[str] = None
+    pos: Optional[Dict[str, int]] = None  # {"x": int, "y": int, "z": int}
 
 class PlayerState(BaseModel):
     id: Literal["A","B"]

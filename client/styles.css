@@ -118,7 +118,7 @@ input[type="range"] {
 }
 
 .card .label { font-size:12px; color:#e3e6ee; }
-.card.tapped { transform:rotate(90deg); transform-origin:center; }
+.card.tapped { transform:rotate(-90deg); transform-origin:center; }
 .card.faceDown { background:#0b0e16 url('/static/assets/cardback.png') center/cover no-repeat; }
 .card:active { cursor:grabbing; }
 .card.hasImage { background-size:cover; background-position:center; }
@@ -187,5 +187,29 @@ input[type="range"] {
 
 .zone.big::-webkit-scrollbar-thumb:hover {
   background: rgba(119, 204, 204, 0.6);
+}
+
+
+/* Free placement only on battlefields */
+#myBattlefield, #oppBattlefield {
+  position: relative;
+  overflow: hidden; /* keep cards inside */
+}
+
+/* Battlefield cards are absolutely positioned but still sized by --card-h */
+#myBattlefield .card, #oppBattlefield .card {
+  position: absolute;
+  left: var(--x, 0px);
+  top: var(--y, 0px);
+  z-index: var(--z, 1);
+  height: min(var(--card-h, 100%), 100%);
+  width: auto;
+  aspect-ratio: 5 / 7;
+  touch-action: none; /* smoother pointer interactions */
+}
+
+#myBattlefield .card.dragging, #oppBattlefield .card.dragging {
+  opacity: 0.85;
+  cursor: grabbing;
 }
 
