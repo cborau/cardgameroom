@@ -210,7 +210,7 @@ function render() {
   zoneThumb(lib, self.library, "Library", {showBack:true, clickable:true});
 
   const exi = $("#myExile"); exi.dataset.zone = "exile";
-  zoneThumb(exi, A.exile, "Exile", {clickable:true});
+  zoneThumb(exi, self.exile, "Exile", {clickable:true});
 
   const gry = $("#myGraveyard"); gry.dataset.zone = "graveyard";
   zoneThumb(gry, self.graveyard, "Graveyard", {clickable:true});
