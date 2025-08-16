@@ -3,11 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CardGameRoom MVP</title>
+  <title>CardGameRoom</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
-<div id="zoom" class="hidden"><img id="zoomImg" alt="Card preview"/></div>
 <body>
+  <div id="zoom" class="hidden"><img id="zoomImg" alt="Card preview"/></div>
+
+  <!-- Join -->
   <div id="join">
     <h1>Join Room</h1>
     <label>Room ID <input id="room" placeholder="e.g. 4J7K" /></label>
@@ -17,64 +19,84 @@
         <option value="B">B</option>
       </select>
     </label>
-    <label>Name <input id="name" placeholder="Your name" /></label>
-    <label>Deck
-      <select id="deck">
-        <option value="">Loading decks...</option>
-      </select>
+    <label>Your name <input id="pname" placeholder="Name on table" /></label>
+    <label id="deckRow">Deck
+      <select id="deck"></select>
     </label>
-    <button id="btnJoin">Join</button>
-    <p class="hint">Open a second browser tab, choose the same room and the other seat.</p>
+    <button id="joinBtn">Enter</button>
+    <p class="hint">Tip: open two tabs, join as A and B.</p>
   </div>
 
-  <div id="table" class="hidden">
+  <!-- Table -->
+  <div id="app" class="hidden">
     <header>
-      <div class="turn">Turn: <span id="turn"></span> | Phase: <span id="phase"></span></div>
+      <div class="turn">Turn: <span id="turn"></span> • <span id="phase"></span></div>
       <div class="controls">
-        <button data-act="draw">Draw (D)</button>
-        <button data-act="pass">Pass Turn (P)</button>
+        <button data-act="draw">Draw</button>
+        <button data-act="pass">Pass Turn</button>
         <button data-act="shuffle">Shuffle</button>
-        <button data-act="reveal">Reveal Hand</button>
         <button data-act="save">Save</button>
         <button data-act="load">Load</button>
-      </div>
-      <div class="life">
-        <div id="lifeA" class="lifeBox">
-          <div class="name" id="nameA"></div>
-          <button data-life="A,-1">−</button>
-          <span class="val" id="lifeValA">20</span>
-          <button data-life="A,1">+</button>
-        </div>
-        <div id="lifeB" class="lifeBox">
-          <div class="name" id="nameB"></div>
-          <button data-life="B,-1">−</button>
-          <span class="val" id="lifeValB">20</span>
-          <button data-life="B,1">+</button>
-        </div>
       </div>
     </header>
 
     <main>
-      <section id="opponentZones">
-        <h3>Opponent</h3>
-        <div class="zoneRow">
-          <div class="zone" id="oppLibrary">Library</div>
-          <div class="zone" id="oppGraveyard">Graveyard</div>
-          <div class="zone" id="oppExile">Exile</div>
+      <!-- Opponent (no title header) -->
+      <section class="playerArea" id="oppArea">
+        <div class="grid3">
+          <div class="zone thumb" id="oppExile"><span class="zoneLabel">Exile</span></div>
+          <div class="stack">
+            <div class="info name" id="nameB"></div>
+            <div class="info wins" id="winsB"></div>
+            <div class="info life" id="lifeB"></div>
+          </div>
+          <div class="zone big" id="oppBattlefield"><span class="zoneLabel">Battlefield</span></div>
+
+          <div class="zone thumb" id="oppGraveyard"><span class="zoneLabel">Graveyard</span></div>
+          <div class="zone thumb" id="oppLibrary"><span class="zoneLabel">Library</span></div>
+          <div class="zone big" id="oppHand"><span class="zoneLabel">Hand</span></div>
         </div>
-        <div class="zone" id="oppBattlefield">Battlefield</div>
-        <div class="zone" id="oppHand">Hand</div>
       </section>
 
-      <section id="myZones">
-        <h3>Me</h3>
-        <div class="zoneRow">
-          <div class="zone droptarget" data-zone="library">Library</div>
-          <div class="zone droptarget" data-zone="graveyard">Graveyard</div>
-          <div class="zone droptarget" data-zone="exile">Exile</div>
+      <!-- Me (Library moved between Graveyard and Hand) -->
+      <section class="playerArea" id="meArea">
+        <div class="grid3">
+          <div class="zone thumb clickable droptarget" data-zone="exile" id="myExile">
+            <span class="zoneLabel">Exile</span>
+          </div>
+
+          <div class="stack">
+            <div class="info name" id="nameA"></div>
+            <div class="info wins ctrls" id="winsA">
+              <span class="miniLabel">Wins</span>
+              <button data-wins="A,-1">-</button>
+              <span id="winsValA">0</span>
+              <button data-wins="A,1">+</button>
+            </div>
+            <div class="info life ctrls" id="lifeA">
+              <span class="miniLabel">Life </span>
+              <button data-life="A,-1">-</button>
+              <span id="lifeValA">20</span>
+              <button data-life="A,1">+</button>
+            </div>
+          </div>
+
+          <div class="zone big droptarget" data-zone="battlefield" id="myBattlefield">
+            <span class="zoneLabel">Battlefield</span>
+          </div>
+
+          <div class="zone thumb clickable droptarget" data-zone="graveyard" id="myGraveyard">
+            <span class="zoneLabel">Graveyard</span>
+          </div>
+
+          <div class="zone thumb clickable droptarget" data-zone="library" id="myLibrary">
+            <span class="zoneLabel">Library</span>
+          </div>
+
+          <div class="zone big droptarget" data-zone="hand" id="myHand">
+            <span class="zoneLabel">Hand</span>
+          </div>
         </div>
-        <div class="zone droptarget big" data-zone="battlefield" id="myBattlefield">Battlefield</div>
-        <div class="zone droptarget" data-zone="hand" id="myHand">Hand</div>
       </section>
     </main>
   </div>
@@ -85,6 +107,6 @@
     </div>
   </template>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js" defer></script>
 </body>
 </html>

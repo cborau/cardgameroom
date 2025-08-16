@@ -1,183 +1,138 @@
-import asyncio, json
+# server/app.py
+import json
 from pathlib import Path
-from typing import Dict, Set
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from typing import Dict
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .models import ClientHello, ClientAction, ServerState
 from .state import new_room, apply_action
 from .persistence import save_room, load_room, load_deck
 
-app = FastAPI()
+app = FastAPI(title="CardGameRoom")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-CLIENT_DIR = Path(__file__).parents[1] / "client"
-app.mount("/static", StaticFiles(directory=str(CLIENT_DIR)), name="static")
+ROOT = Path(__file__).resolve().parent.parent  # project root (one level above /server)
 
-IMAGES_DIR = Path(__file__).parent / "data" / "images"
-IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
+def _find_client_dir() -> Path:
+    for c in [ROOT / "client", ROOT / "public", ROOT / "static", ROOT]:
+        if (c / "index.html").exists():
+            return c
+    return ROOT
+
+CLIENT = _find_client_dir()
+app.mount("/static", StaticFiles(directory=CLIENT), name="static")
+
+# Serve card images saved under server/data/images as /images/...
+IMG_DIR = ROOT / "server" / "data" / "images"
+if IMG_DIR.exists():
+    app.mount("/images", StaticFiles(directory=IMG_DIR), name="images")
+
+rooms: Dict[str, Dict[str, object]] = {}
+
+def _model_dump(m):
+    return m.model_dump() if hasattr(m, "model_dump") else m.dict()
+
+async def _broadcast(room_id: str):
+    if room_id not in rooms:
+        return
+    payload = _model_dump(ServerState(kind="state", state=rooms[room_id]["state"]))
+    for peer in list(rooms[room_id]["peers"]):
+        try:
+            await peer.send_json(payload)
+        except Exception:
+            try:
+                rooms[room_id]["peers"].discard(peer)  # type: ignore[arg-type]
+            except Exception:
+                pass
 
 @app.get("/")
-async def root():
-    return FileResponse(CLIENT_DIR / "index.html")
-
-# in-memory room registry: room_id -> dict
-class RoomCtx:
-    def __init__(self, state):
-        self.state = state
-        self.connections: Set[WebSocket] = set()
-        self.lock = asyncio.Lock()
-
-rooms: Dict[str, RoomCtx] = {}
-
-def ensure_room(room_id: str, deck_a: str = None, deck_b: str = None) -> RoomCtx:
-    if room_id in rooms:
-        return rooms[room_id]
-    # try load from disk or create new with default decks
-    loaded = load_room(room_id)
-    if loaded is None:
-        # Use provided decks or fallback to first available deck
-        from .persistence import DECKS_DIR
-        available_decks = [f.stem for f in DECKS_DIR.glob("*.json")]
-        if not available_decks:
-            # Create minimal fallback if no decks exist
-            p1 = [{"name": f"Card {i+1}"} for i in range(40)]
-            p2 = [{"name": f"Card {i+1}"} for i in range(40)]
-        else:
-            default_deck = available_decks[0]
-            deck_a = deck_a or default_deck
-            deck_b = deck_b or default_deck
-            p1 = load_deck(f"{deck_a}.json")
-            p2 = load_deck(f"{deck_b}.json")
-        state = new_room(room_id, p1, p2)
-    else:
-        state = loaded
-    # Sanitize any card.image values that accidentally persisted absolute paths
-    changed = False
-    for c in state.cards.values():
-        if not c.image:
-            continue
-        img = c.image.replace("\\", "/")
-        # Case 1: image stored like "/images/C:/.../images/<file>.jpg" -> keep only final filename
-        if img.startswith("/images/"):
-            rest = img[len("/images/"):]
-            if ":" in rest:  # drive letter present, strip path
-                filename = rest.split("/")[-1]
-                new_val = f"/images/{filename}"
-                if new_val != c.image:
-                    c.image = new_val
-                    changed = True
-        # Case 2: absolute filesystem path without leading /images
-        elif ":/" in img.lower():
-            filename = img.split("/")[-1]
-            new_val = f"/images/{filename}"
-            if new_val != c.image:
-                c.image = new_val
-                changed = True
-    if changed:
-        save_room(state)  # persist migration so future loads are clean
-    ctx = RoomCtx(state)
-    rooms[room_id] = ctx
-    return ctx
-
-@app.post("/api/join_room")
-async def join_room(request: Request):
-    """Join or create a room with specific deck selection"""
-    data = await request.json()
-    room_id = data.get("room_id")
-    player_id = data.get("player_id")
-    deck_name = data.get("deck")
-    
-    if not room_id or not player_id or not deck_name:
-        return {"error": "Missing required fields"}
-    
-    # Get or create room with deck preferences
-    if room_id in rooms:
-        ctx = rooms[room_id]
-        # Room already exists, can't change decks
-        return {"success": True, "message": "Joined existing room"}
-    else:
-        # Create new room - we'll set the deck for this player
-        # For now, use the same deck for both players (can be enhanced later)
-        ctx = ensure_room(room_id, deck_name, deck_name)
-        return {"success": True, "message": "Created new room"}
+async def index():
+    return FileResponse(str(CLIENT / "index.html"))
 
 @app.get("/api/decks")
 async def list_decks():
-    """List all available deck files"""
-    from .persistence import DECKS_DIR
-    deck_files = [f.stem for f in DECKS_DIR.glob("*.json")]
-    return {"decks": sorted(deck_files)}
-
-@app.get("/api/rooms/{room_id}")
-async def get_room(room_id: str):
-    return ensure_room(room_id).state
-
-@app.get("/api/debug/images/{room_id}")
-async def debug_images(room_id: str):
-    ctx = ensure_room(room_id)
-    imgs = sorted({c.image for c in ctx.state.cards.values() if c.image})
-    return {"count": len(imgs), "samples": imgs[:20]}
+    decks_dir = ROOT / "server" / "data" / "decks"
+    decks = [p.stem for p in decks_dir.glob("*.json")] if decks_dir.exists() else []
+    return {"decks": decks}
 
 @app.post("/api/save/{room_id}")
-async def save(room_id: str):
-    ctx = ensure_room(room_id)
-    save_room(ctx.state)
+async def http_save(room_id: str):
+    ctx = rooms.get(room_id)
+    if not ctx:
+        return {"ok": False, "msg": "Room not found"}
+    save_room(ctx["state"])  # type: ignore[arg-type]
     return {"ok": True}
 
 @app.post("/api/load/{room_id}")
-async def load(room_id: str):
-    loaded = load_room(room_id)
-    if loaded is None:
+async def http_load(room_id: str):
+    st = load_room(room_id)
+    if not st:
         return {"ok": False, "msg": "No saved state"}
-    rooms[room_id] = RoomCtx(loaded)
+    rooms[room_id] = {"state": st, "peers": set()}
+    await _broadcast(room_id)
     return {"ok": True}
 
 @app.websocket("/ws/{room_id}")
-async def ws_endpoint(ws: WebSocket, room_id: str):
+async def ws_room(ws: WebSocket, room_id: str):
     await ws.accept()
-    ctx = ensure_room(room_id)
-    ctx.connections.add(ws)
     try:
-        # initial state push
-        await ws.send_json(ServerState(kind="state", state=ctx.state).model_dump())
+        hello = ClientHello(**json.loads(await ws.receive_text()))
+
+        ctx = rooms.get(room_id)
+        if ctx is None:
+            # Pick decks. If the first joiner sent a deck, use it for that seat.
+            deckA_name = hello.deck if hello.player_id == "A" and hello.deck else "A"
+            deckB_name = hello.deck if hello.player_id == "B" and hello.deck else "B"
+            st = new_room(room_id, load_deck(deckA_name), load_deck(deckB_name))
+            if hello.name:
+                st.players[hello.player_id].name = hello.name
+            ctx = rooms[room_id] = {"state": st, "peers": set()}
+        else:
+            # If player provided a deck and their library is empty, load it now.
+            if hello.deck:
+                st = ctx["state"]  # type: ignore[assignment]
+                if not st.players[hello.player_id].library:
+                    deck = load_deck(hello.deck)
+                    st.players[hello.player_id].library = []
+                    # append new cards into room state
+                    for d in deck:
+                        from .state import _mk_card  # local helper
+                        c = _mk_card(d)
+                        st.cards[c.id] = c
+                        st.players[hello.player_id].library.append(c.id)
+
+            if hello.name:
+                try:
+                    ctx["state"].players[hello.player_id].name = hello.name  # type: ignore[index]
+                except Exception:
+                    pass
+
+        ctx["peers"].add(ws)  # type: ignore[index]
+        await ws.send_json(_model_dump(ServerState(kind="state", state=ctx["state"])))  # type: ignore[index]
+
         while True:
             raw = await ws.receive_text()
-            msg = json.loads(raw)
-
-            if msg.get("kind") == "hello":
-                # optional name sync
-                hello = ClientHello.model_validate(msg)
-                if hello.name:
-                    async with ctx.lock:
-                        ctx.state.players[hello.player_id].name = hello.name[:24]
-                        await broadcast(ctx)
-                continue
-
-            if msg.get("kind") == "action":
-                act = ClientAction.model_validate(msg)
-                async with ctx.lock:
-                    ctx.state = apply_action(ctx.state, act.type, act.payload)
-                    await broadcast(ctx)
+            act = ClientAction(**json.loads(raw))
+            apply_action(ctx["state"], act.type, act.payload)  # type: ignore[index]
+            await _broadcast(room_id)
 
     except WebSocketDisconnect:
         pass
+    except Exception:
+        pass
     finally:
-        ctx.connections.discard(ws)
-
-async def broadcast(ctx: RoomCtx):
-    payload = ServerState(kind="state", state=ctx.state).model_dump()
-    dead = []
-    for c in ctx.connections:
         try:
-            await c.send_json(payload)
+            rooms.get(room_id, {}).get("peers", set()).discard(ws)  # type: ignore[union-attr]
         except Exception:
-            dead.append(c)
-    for d in dead:
-        ctx.connections.discard(d)
+            pass

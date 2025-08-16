@@ -57,14 +57,16 @@ def load_room(room_id: str) -> RoomState | None:
 
 def load_deck(name: str) -> list[dict]:
     """Supports:
-       A) legacy: ["Card A","Card B",...]
-       B) rich: {"source": "...", "cards": [{"name": "...","qty": 3,"image": "images/..jpg", ...}]}
+       A) legacy: ["Card A", ...]
+       B) rich: {"cards": [{"name":"...", "qty":3, "image":"images/..jpg", ...}]}
     """
-    p = DECKS_DIR / name
+    deck_file = name if name.lower().endswith(".json") else f"{name}.json"
+    p = DECKS_DIR / deck_file
     if not p.exists():
-        # fallback: 40 generic
+        # fallback: 40 generic cards
         return [{"name": f"Card {i+1}"} for i in range(40)]
     data = json.loads(p.read_text(encoding="utf-8"))
+
     # legacy list
     if isinstance(data, list):
         return [{"name": n} if isinstance(n, str) else n for n in data]
@@ -82,3 +84,4 @@ def load_deck(name: str) -> list[dict]:
         }
         cards.extend([base.copy() for _ in range(qty)])
     return cards
+

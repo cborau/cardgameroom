@@ -8,8 +8,8 @@ class CardInstance(BaseModel):
     name: str
     tapped: bool = False
     counters: Dict[str, int] = Field(default_factory=dict)
-    image: Optional[str] = None          
-    scryfall_id: Optional[str] = None    
+    image: Optional[str] = None
+    scryfall_id: Optional[str] = None
     set: Optional[str] = None
     collector_number: Optional[str] = None
 
@@ -17,6 +17,7 @@ class PlayerState(BaseModel):
     id: Literal["A","B"]
     name: str = "Player"
     life: int = 20
+    wins: int = 0
     revealed_hand: bool = False
     library: List[str] = Field(default_factory=list)
     hand: List[str] = Field(default_factory=list)
@@ -36,6 +37,7 @@ class ClientHello(BaseModel):
     room_id: str
     player_id: Literal["A","B"]
     name: Optional[str] = None
+    deck: Optional[str] = None  # NEW
 
 class ClientAction(BaseModel):
     kind: Literal["action"]

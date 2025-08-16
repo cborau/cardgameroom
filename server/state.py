@@ -1,6 +1,5 @@
-import random, time, uuid
+import random, uuid
 from typing import Dict, List
-from pydantic import BaseModel
 from .models import RoomState, PlayerState, CardInstance
 
 def _uid() -> str:
@@ -18,89 +17,77 @@ def _mk_card(desc) -> CardInstance:
         collector_number=desc.get("collector_number"),
     )
 
-def new_room(room_id: str, p1_deck: List[str], p2_deck: List[str]) -> RoomState:
+def new_room(room_id: str, deckA: List[dict] | None = None, deckB: List[dict] | None = None) -> RoomState:
+    pA = PlayerState(id="A")
+    pB = PlayerState(id="B")
     cards: Dict[str, CardInstance] = {}
-    p1_ids = []
-    p2_ids = []
-    for d in p1_deck:
-        ci = _mk_card(d)
-        cards[ci.id] = ci
-        p1_ids.append(ci.id)
-    for d in p2_deck:
-        ci = _mk_card(d)
-        cards[ci.id] = ci
-        p2_ids.append(ci.id)
-    random.Random(room_id).shuffle(p1_ids)
-    random.Random(room_id[::-1]).shuffle(p2_ids)
-    return RoomState(
-        room_id=room_id,
-        turn="A",
-        players={
-            "A": PlayerState(id="A", name="Player A", library=p1_ids),
-            "B": PlayerState(id="B", name="Player B", library=p2_ids),
-        },
-        cards=cards,
-    )
 
-def apply_action(state: RoomState, action_type: str, p: Dict) -> RoomState:
-    s = state
-    if action_type == "set_name":
-        pid = p["player_id"]; name = p["name"][:24]
-        s.players[pid].name = name
-        return s
+    def load_into(deck: List[dict] | None):
+        nonlocal cards
+        if not deck:
+            return []
+        ids = []
+        for d in deck:
+            c = _mk_card(d)
+            cards[c.id] = c
+            ids.append(c.id)
+        random.shuffle(ids)
+        return ids
 
+    pA.library = load_into(deckA or [])
+    pB.library = load_into(deckB or [])
+
+    # FIX: correct field name is room_id (not id)
+    return RoomState(room_id=room_id, players={"A": pA, "B": pB}, cards=cards)
+
+def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
     if action_type == "draw":
         pid = p["player_id"]; n = int(p.get("n",1))
+        pl = s.players[pid]
         for _ in range(n):
-            if s.players[pid].library:
-                cid = s.players[pid].library.pop()
-                s.players[pid].hand.append(cid)
+            if pl.library:
+                pl.hand.append(pl.library.pop())
         return s
-
     if action_type == "move":
-        # move card between zones. zones: library, hand, battlefield, graveyard, exile
-        cid = p["card_id"]; src = p["from"]; dst = p["to"]; pid = p["player_id"]
-        zones = s.players[pid]
-        sources = [src] if src != "any" else ["hand","battlefield","graveyard","exile","library"]
-        removed = False
-        for z in sources:
-            lst = getattr(zones, z)
-            if cid in lst:
-                lst.remove(cid)
-                removed = True
+        pid = p["player_id"]; cid = p["card_id"]; to = p["to"]
+        pl = s.players[pid]
+        zones = ["hand","battlefield","graveyard","exile","library"]
+        for z in zones:
+            arr = getattr(pl, z)
+            if cid in arr:
+                arr.remove(cid)
                 break
-        if not removed:
-            return s
-        getattr(zones, dst).append(cid)
+        getattr(pl, to).append(cid)
         return s
-
     if action_type == "tap_toggle":
         cid = p["card_id"]
         s.cards[cid].tapped = not s.cards[cid].tapped
         return s
-
     if action_type == "life":
         pid = p["player_id"]; delta = int(p["delta"])
         s.players[pid].life += delta
         return s
-
-    if action_type == "reveal_hand":
-        pid = p["player_id"]; val = bool(p["value"])
-        s.players[pid].revealed_hand = val
+    if action_type == "wins":
+        pid = p["player_id"]; delta = int(p["delta"])
+        s.players[pid].wins = max(0, s.players[pid].wins + delta)
         return s
-
     if action_type == "pass_turn":
         s.turn = "B" if s.turn == "A" else "A"
         s.phase = "Main"
         return s
-
     if action_type == "set_phase":
         s.phase = str(p["phase"])
         return s
-
     if action_type == "shuffle_library":
         pid = p["player_id"]
         random.shuffle(s.players[pid].library)
         return s
-
+    if action_type == "swap_zone_with_hand":
+        pid = p["player_id"]; zone = p["zone"]
+        assert zone in ("graveyard","exile","library")
+        pl = s.players[pid]
+        other = getattr(pl, zone)
+        pl.hand, other[:] = other[:], pl.hand[:]
+        setattr(pl, zone, other)
+        return s
     return s

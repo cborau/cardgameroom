@@ -1,4 +1,5 @@
 from server.state import new_room, apply_action
+from server.models import RoomState
 
 def _make():
     s = new_room("T123", [f"A{i}" for i in range(5)], [f"B{i}" for i in range(5)])
@@ -27,3 +28,16 @@ def test_life_and_pass_turn():
     old = s.turn
     s = apply_action(s, "pass_turn", {})
     assert s.turn != old
+    
+
+def test_swap_zone_with_hand():
+    st: RoomState = new_room("T", [], [])
+    # seed some fake cards directly
+    st.players["A"].hand = ["h1","h2"]
+    st.players["A"].graveyard = ["g1"]
+    st.cards["h1"] = st.cards["h2"] = st.cards.setdefault("x", None) or {}
+    st.cards["g1"] = {}
+    apply_action(st, "swap_zone_with_hand", {"player_id":"A", "zone":"graveyard"})
+    assert st.players["A"].hand == ["g1"]
+    assert st.players["A"].graveyard == ["h1","h2"]
+
