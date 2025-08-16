@@ -126,7 +126,7 @@ input[type="range"] {
 
 .droptarget.highlight { outline:2px solid var(--accent); }
 
-#zoom { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:1000; }
+#zoom { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:2147483647; }
 #zoom.hidden { display:none; }
 #zoom img { max-width: min(90vw, 720px); max-height: 90vh; border-radius:12px; }
 
