@@ -16,6 +16,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const key = e.key.toLowerCase();
     if (key === 'd') sendAction("draw", { player_id: me.id, n: 1 });
     if (key === 'p') sendAction("pass_turn", {});
+    if (key === 'n') {
+      // Next phase shortcut
+      const phases = ["Untap","Upkeep","Draw","Main","Combat","Second Main","End"];
+      const idx = phases.indexOf(state.phase);
+      const next = phases[(idx + 1) % phases.length];
+      sendAction("set_phase", { phase: next });
+    }
+    if (key === 's') {
+      // Shuffle shortcut
+      sendAction("shuffle_library", { player_id: me.id });
+      const lib = $("#myLibrary"); lib.classList.add("shuffled");
+      setTimeout(() => lib.classList.remove("shuffled"), 1000);
+    }
   });
 });
 
