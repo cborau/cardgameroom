@@ -11,8 +11,12 @@ DECK_URLS = [
 ]
 # You can export a deck from Goldfish in Arena format (and manually remove sideboard cards).
 DECK_TXTS = [
-    "WUG.txt",
-    #"Boros.txt",
+    # "Modern-Amulet Titan.txt",
+    # "Modern-Dimir Murktide.txt",
+    # "Modern-Domain Zoo.txt",
+    # "Modern-Esper Midrange.txt",
+    "Standard-Dimir Midrange.txt",
+    "Standard-Izzet Cauldron.txt",
     #"Affinity.txt"
 ]
 
@@ -35,7 +39,7 @@ PREFERRED_IMAGE_KEYS = ["normal","large","png"]
 
 # polite rate limit to avoid hammering Scryfall
 LAST_REQ = 0.0
-MIN_GAP = 0.12  # ~8–10 req/s max; be nice
+MIN_GAP = 0.2  # ~1/MIN_GAP req/s max; 
 
 def polite_get(url, **kw):
     global LAST_REQ

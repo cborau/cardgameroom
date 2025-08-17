@@ -226,12 +226,13 @@ function render() {
   $("#turn").textContent = state.turn === "A" ? (A.name || "Me") : (B.name || "Opponent");
   $("#phase").textContent = state.phase;
 
-  $("#nameA").textContent = A.name || "Player A";
-  $("#nameB").textContent = B.name || "Player B";
-  $("#winsValA").textContent = A.wins;
-  $("#winsB").textContent = `Wins: ${B.wins}`;
-  $("#lifeValA").textContent = A.life;
-  $("#lifeB").textContent = `Life: ${B.life}`;
+  // Swap labels for current player (self) and opponent (opp) based on me.id
+  $("#nameA").textContent = self.name || `Player ${me.id}`;
+  $("#nameB").textContent = opp.name || `Player ${me.id === 'B' ? 'A' : 'B'}`;
+  $("#winsValA").textContent = self.wins;
+  $("#winsB").textContent = `Wins: ${opp.wins}`;
+  $("#lifeValA").textContent = self.life;
+  $("#lifeB").textContent = `Life: ${opp.life}`;
 
   // Opponent zones
   zoneThumb($("#oppLibrary"), opp.library, "Library", {showBack:true});
@@ -398,15 +399,16 @@ function wireButtons() {
     sendAction('create_token', { player_id: me.id, name: 'Marker', creature: false, text });
   };
 
+  // Handle life and wins controls for current player
   $("#lifeA").addEventListener("click", e => {
     const t = e.target.closest("button"); if (!t) return;
     const [, delta] = (t.dataset.wins ? [] : (t.dataset.life || "")).split(",");
-    if (delta) sendAction("life", { player_id: "A", delta: parseInt(delta,10) });
+    if (delta) sendAction("life", { player_id: me.id, delta: parseInt(delta, 10) });
   });
   $("#winsA").addEventListener("click", e => {
     const t = e.target.closest("button"); if (!t) return;
     const [, delta] = (t.dataset.wins || "").split(",");
-    sendAction("wins", { player_id: "A", delta: parseInt(delta,10) });
+    sendAction("wins", { player_id: me.id, delta: parseInt(delta, 10) });
   });
 }
 
