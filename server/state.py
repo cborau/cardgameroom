@@ -36,6 +36,13 @@ def new_room(room_id: str, deckA: List[dict] | None = None, deckB: List[dict] | 
 
     pA.library = load_into(deckA or [])
     pB.library = load_into(deckB or [])
+    # draw opening hands
+    for _ in range(7):
+        if pA.library:
+            pA.hand.append(pA.library.pop())
+    for _ in range(7):
+        if pB.library:
+            pB.hand.append(pB.library.pop())
 
     # FIX: correct field name is room_id (not id)
     return RoomState(room_id=room_id, players={"A": pA, "B": pB}, cards=cards)
@@ -90,6 +97,18 @@ def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
     if action_type == "shuffle_library":
         pid = p["player_id"]
         random.shuffle(s.players[pid].library)
+        return s
+    if action_type == "mulligan":
+        pid = p["player_id"]; n = int(p.get("n", 7))
+        pl = s.players[pid]
+        # return hand to library and shuffle
+        pl.library.extend(pl.hand)
+        pl.hand.clear()
+        random.shuffle(pl.library)
+        # draw n cards
+        for _ in range(n):
+            if pl.library:
+                pl.hand.append(pl.library.pop())
         return s
     if action_type == "swap_zone_with_hand":
         pid = p["player_id"]; zone = p["zone"]

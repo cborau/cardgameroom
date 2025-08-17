@@ -10,6 +10,13 @@ document.addEventListener("DOMContentLoaded", () => {
   wireButtons();
   wireZoneClicks();
   loadDecks();
+  // keyboard shortcuts for Draw (D) and Pass (P)
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    const key = e.key.toLowerCase();
+    if (key === 'd') sendAction("draw", { player_id: me.id, n: 1 });
+    if (key === 'p') sendAction("pass_turn", {});
+  });
 });
 
 // ---- deck list
@@ -302,11 +309,21 @@ function setupDnD() {
 // Header buttons (unchanged)
 function wireButtons() {
   const by = s => document.querySelector(`[data-act='${s}']`);
-  by('draw').onclick = () => sendAction("draw", { player_id: me.id, n: 1 });
-  by('pass').onclick = () => sendAction("pass_turn", {});
-  by('shuffle').onclick = () => sendAction("shuffle_library", { player_id: me.id });
-  by('save').onclick = async () => { await fetch(`/api/save/${roomId}`, {method:"POST"}); };
-  by('load').onclick = async () => { await fetch(`/api/load/${roomId}`, {method:"POST"}); };
+  // action buttons
+  by('mulligan').onclick = () => sendAction("mulligan", { player_id: me.id, n: 7 });
+  by('draw').onclick     = () => sendAction("draw",     { player_id: me.id, n: 1 });
+  by('nextPhase').onclick= () => {
+    const phases = ["Untap","Upkeep","Draw","Main","Combat","Second Main","End"];
+    const idx = phases.indexOf(state.phase);
+    const next = phases[(idx + 1) % phases.length];
+    sendAction("set_phase", { phase: next });
+  };
+  by('pass').onclick     = () => sendAction("pass_turn", {});
+  by('shuffle').onclick  = () => {
+    sendAction("shuffle_library", { player_id: me.id });
+    const lib = $("#myLibrary"); lib.classList.add("shuffled");
+    setTimeout(() => lib.classList.remove("shuffled"), 1000);
+  };
 
   $("#lifeA").addEventListener("click", e => {
     const t = e.target.closest("button"); if (!t) return;
