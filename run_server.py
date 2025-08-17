@@ -10,7 +10,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "server.app:app",      # import string, not the app object
         host="0.0.0.0",
-        port=8001,
+        port=8000,
         reload=True,
         # Optional: also watch these folders for changes
         # reload_dirs=[str(Path(__file__).parent / "server"), str(Path(__file__).parent / "client")],
