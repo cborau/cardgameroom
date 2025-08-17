@@ -18,12 +18,15 @@ main {
   display:grid; 
   gap:1.5rem; 
   height: calc(100vh - 80px); /* Full height minus header */
-  overflow: hidden;
+  overflow: auto;
 }
 
 .playerArea {
-  height: calc(50vh - 40px); /* Each player area takes half the remaining space */
+  position: relative;    /* create a stacking context */
+  overflow: hidden;      /* clip anything that tries to overflow its half */
 }
+#oppArea { z-index: 1; }
+#meArea  { z-index: 2; } /* ensure your area sits above if anything still overlaps */
 .playerArea h3 { margin:0 0 0.5rem 2px; color:var(--muted); font-weight:600; }
 
 .grid3 {
@@ -44,7 +47,7 @@ main {
 }
 
 .zone.big { 
-  min-height:200px; 
+  min-height:clamp(120px, 28vh, 240px); /* scales with viewport height */
   display:flex; 
   flex-wrap:wrap; 
   gap:10px; 
@@ -212,4 +215,22 @@ input[type="range"] {
   opacity: 0.85;
   cursor: grabbing;
 }
+
+/* Short screens: tighten spacing and downscale cards */
+@media (max-height: 820px) {
+  main { gap: 0.8rem; }
+  .grid3 { gap: 8px; }
+  .zone.big { --card-h: 85%; }            /* shrink card height inside big zones */
+}
+
+@media (max-height: 700px) {
+  .grid3 { grid-template-columns: 130px 120px 1fr; } /* narrower side columns */
+  .zone.big { min-height: 130px; --card-h: 75%; }    /* smaller big zones + cards */
+}
+
+/* Narrow widths: slightly smaller side columns */
+@media (max-width: 900px) {
+  .grid3 { grid-template-columns: 120px 110px 1fr; }
+}
+
 
