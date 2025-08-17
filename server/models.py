@@ -13,6 +13,11 @@ class CardInstance(BaseModel):
     set: Optional[str] = None
     collector_number: Optional[str] = None
     pos: Optional[Dict[str, int]] = None  # {"x": int, "y": int, "z": int}
+    # Token support fields
+    is_token: bool = False
+    # type of token: "creature" (card-like) or "chip" (small marker)
+    token_kind: Literal["creature","chip"] = "creature"
+    text: Optional[str] = None
 
 class PlayerState(BaseModel):
     id: Literal["A","B"]

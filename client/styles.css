@@ -21,6 +21,49 @@ main {
   overflow: auto;
 }
 
+/* Token variants */
+.card.token.creature {
+  /* card-sized creature token */
+  background: #c7cad2;
+  align-items: center;
+  justify-content: center;
+  border: 10px solid rgb(81, 81, 84);
+}
+
+.card.token.chip {
+  /* small pill token, sizing wraps text */
+  height: auto !important;
+  width: auto !important;
+  min-height: 0 !important;
+  padding: 2px 4px !important;
+  border-radius: 999px !important;
+  display: inline-flex !important;
+  aspect-ratio: auto !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  background: #8b0000;
+  color: #fff;
+  border: 1px solid #5a0000!important;
+}
+.card.token.chip.tapped {
+  transform: none;    /* chips are never rotated */
+}
+
+/* battlefield absolute placement for chips as well */
+.zone.big .card.token.chip {
+  position: absolute !important;
+  left: var(--x, 0px) !important;
+  top: var(--y, 0px) !important;
+  z-index: var(--z, 1) !important;
+  height: auto !important;         /* override .zone.big .card height */
+  width: auto !important;
+  aspect-ratio: auto !important;   /* not a 5:7 card */
+  min-height: 0 !important;
+}
+
+.card.token .label { display: block; }
+
 .playerArea {
   position: relative;    /* create a stacking context */
   overflow: hidden;      /* clip anything that tries to overflow its half */
@@ -198,6 +241,17 @@ input[type="range"] {
   position: relative;
   overflow: hidden; /* keep cards inside */
 }
+/* Override battlefield card sizing for chip tokens */
+#myBattlefield .card.token.chip,
+#oppBattlefield .card.token.chip {
+  position: absolute !important;
+  left: var(--x, 0px) !important;
+  top: var(--y, 0px) !important;
+  height: auto !important;
+  width: auto !important;
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+}
 /* Shuffle glow effect */
 @keyframes glow {
   from { box-shadow: 0 0 8px var(--accent); }
@@ -239,6 +293,11 @@ input[type="range"] {
 /* Narrow widths: slightly smaller side columns */
 @media (max-width: 900px) {
   .grid3 { grid-template-columns: 120px 110px 1fr; }
+}
+
+.card.token.creature .label {
+  color: #0b0c0c !important;
+  font-size: 16px;
 }
 
 

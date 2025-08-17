@@ -109,12 +109,17 @@ function makeCardEl(cid, ownerPid) {
   const c = state.cards[cid];
   const el = document.createElement("div");
   el.className = "card";
+  // token styling: token_kind is 'creature' or 'chip'
+  if (c.is_token) {
+    el.classList.add("token", c.token_kind);
+  }
   el.dataset.id = String(cid);
   el.dataset.name = c.name || "";
   el.title = c.name;
   const label = document.createElement("div");
   label.className = "label";
-  label.textContent = c.name;
+  // for chip tokens, show text; else show name
+  label.textContent = (c.is_token && c.token_kind === 'chip') ? (c.text || c.name) : c.name;
   el.appendChild(label);
 
   const url = imgUrlFor(c);
@@ -131,7 +136,28 @@ function makeCardEl(cid, ownerPid) {
   el.addEventListener("dragstart", e => {
     e.dataTransfer.setData("text/plain", JSON.stringify({ card_id: cid, owner: ownerPid }));
   });
-
+  // for chip tokens, reposition on drag end
+  if (c.is_token && c.token_kind === 'chip') {
+    el.addEventListener('dragend', e => {
+      e.preventDefault();
+      const zone = document.getElementById('myBattlefield');
+      const rect = zone.getBoundingClientRect();
+      let x = e.clientX - rect.left;
+      let y = e.clientY - rect.top;
+      x = Math.max(0, Math.min(x, rect.width));
+      y = Math.max(0, Math.min(y, rect.height));
+      const z = Date.now() % 1000000;
+      sendAction('set_card_pos', { card_id: cid, x: Math.round(x), y: Math.round(y), z });
+    });
+    // remove drop positioning for chips
+  }
+  // allow right-click removal for all tokens (including creatures)
+  if (c.is_token) {
+    el.oncontextmenu = e => {
+      e.preventDefault();
+      if (confirm('Remove token?')) sendAction('remove_token', { player_id: me.id, card_id: cid });
+    };
+  }
   // tap/untap with simple click on battlefield cards
   el.addEventListener("click", e => {
     // Only tap if the card is on the battlefield (not in hand or other zones)
@@ -140,6 +166,7 @@ function makeCardEl(cid, ownerPid) {
       sendAction("tap_toggle", { card_id: cid });
     }
   });
+
   return el;
 }
 
@@ -245,6 +272,29 @@ function render() {
   const myHand = $("#myHand"); clearZone(myHand);
   self.hand.forEach(cid => myHand.appendChild(makeCardEl(cid, me.id || "A")));
 
+  // Render my tokens
+  const tray = document.getElementById('myTokenTray');
+  clearZone(tray);
+  state.players[me.id].token_tray.forEach(cid => {
+    const tok = state.cards[cid];
+    const el = document.createElement('div');
+    el.className = 'card token chip';
+    // add content label
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = tok.text || tok.name;
+    el.appendChild(label);
+
+    el.onclick = () => {
+      const newText = prompt('Edit token', tok.text || tok.name);
+      if (newText != null) sendAction('update_token', { player_id: me.id, card_id: cid, text: newText });
+    };
+    el.oncontextmenu = e => {
+      e.preventDefault();
+      if (confirm('Remove token?')) sendAction('remove_token', { player_id: me.id, card_id: cid });
+    };
+    tray.appendChild(el);
+  });
 }
 
 // DnD targets (unchanged)
@@ -252,6 +302,7 @@ function setupDnD() {
   $$(".droptarget").forEach(zone => {
     zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("highlight"); });
     zone.addEventListener("dragleave", () => zone.classList.remove("highlight"));
+    // unchanged drop logic for moving cards
     zone.addEventListener("drop", e => {
       e.preventDefault(); zone.classList.remove("highlight");
       let data;
@@ -259,9 +310,8 @@ function setupDnD() {
       if (!data) return;
       const to = zone.dataset.zone;
       sendAction("move", { player_id: me.id, card_id: data.card_id, to });
-      // Also set absolute position when dropping on battlefield
-
       if (to === "battlefield") {
+        // absolute pos logic
         const rect = zone.getBoundingClientRect();
         const hCss = getComputedStyle(zone).getPropertyValue('--card-h').trim();
         let h = parseFloat(hCss);
@@ -336,6 +386,16 @@ function wireButtons() {
     sendAction("shuffle_library", { player_id: me.id });
     const lib = $("#myLibrary"); lib.classList.add("shuffled");
     setTimeout(() => lib.classList.remove("shuffled"), 1000);
+  };
+  by('createCreature').onclick = async () => {
+    const name = prompt('Creature token name', 'Token Creature');
+    if (!name) return;
+    sendAction('create_token', { player_id: me.id, name, creature: true, text: name });
+  };
+  by('createMarker').onclick = async () => {
+    const text = prompt('Marker token text', '+1/+1');
+    if (!text) return;
+    sendAction('create_token', { player_id: me.id, name: 'Marker', creature: false, text });
   };
 
   $("#lifeA").addEventListener("click", e => {

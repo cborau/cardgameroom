@@ -124,5 +124,34 @@ def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
             x = int(p.get("x", 0)); y = int(p.get("y", 0)); z = int(p.get("z", 1))
             s.cards[cid].pos = {"x": x, "y": y, "z": z}
         return s
+    # -- Token management actions --
+    if action_type == "create_token":
+        pid = p["player_id"]
+        tid = _uid()
+        kind = "creature" if p.get("creature") else "chip"
+        tok = CardInstance(id=tid,
+                           name=p.get("name", "Token"),
+                           is_token=True,
+                           token_kind=kind,
+                           text=p.get("text", None))
+        s.cards[tid] = tok
+        # always place tokens onto battlefield
+        s.players[pid].battlefield.append(tid)
+        return s
+    if action_type == "update_token":
+        cid = p["card_id"]
+        tok = s.cards.get(cid)
+        if tok and tok.is_token:
+            tok.text = p.get("text", tok.text)
+        return s
+    if action_type == "remove_token":
+        pid = p.get("player_id")
+        cid = p.get("card_id")
+        # remove from battlefield
+        pl = s.players[pid]
+        if cid in pl.battlefield:
+            pl.battlefield.remove(cid)
+        s.cards.pop(cid, None)
+        return s
 
     return s
