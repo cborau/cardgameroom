@@ -158,6 +158,19 @@ function makeCardEl(cid, ownerPid) {
       if (confirm('Remove token?')) sendAction('remove_token', { player_id: me.id, card_id: cid });
     };
   }
+  // Add right-click context menu for cards in hand (non-tokens only)
+  else if (ownerPid === me.id) {
+    el.addEventListener('contextmenu', e => {
+      const handZone = e.target.closest('#myHand');
+      if (handZone) {
+        e.preventDefault();
+        if (confirm('Put this card at the bottom of your library?')) {
+          sendAction('put_on_bottom', { player_id: me.id, card_id: cid });
+        }
+      }
+    });
+  }
+  
   // tap/untap with simple click on battlefield cards
   el.addEventListener("click", e => {
     // Only tap if the card is on the battlefield (not in hand or other zones)

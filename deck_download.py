@@ -14,9 +14,7 @@ DECK_TXTS = [
     # "Modern-Amulet Titan.txt",
     # "Modern-Dimir Murktide.txt",
     # "Modern-Domain Zoo.txt",
-    # "Modern-Esper Midrange.txt",
-    "Standard-Dimir Midrange.txt",
-    "Standard-Izzet Cauldron.txt",
+    "Modern-Jund Aggro.txt",
     #"Affinity.txt"
 ]
 

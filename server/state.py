@@ -153,5 +153,15 @@ def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
             pl.battlefield.remove(cid)
         s.cards.pop(cid, None)
         return s
+    if action_type == "put_on_bottom":
+        pid = p["player_id"]
+        cid = p["card_id"]
+        pl = s.players[pid]
+        # Remove card from hand
+        if cid in pl.hand:
+            pl.hand.remove(cid)
+            # Put card at the bottom of library (beginning of the list since we pop from the end)
+            pl.library.insert(0, cid)
+        return s
 
     return s
