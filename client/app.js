@@ -243,6 +243,12 @@ function zoneThumb(el, ids, _label, {showBack=false, clickable=false} = {}) {
   clearZone(el);
   el.style.backgroundImage = "";
   el.classList.toggle("clickableEnabled", clickable);
+  
+  // Add privacy mode styling if showing card back for privacy reasons
+  const isPrivacyMode = showBack && ids.length > 0 && 
+    (el.id.includes("Graveyard") || el.id.includes("Exile")) &&
+    !el.id.includes("Library");
+  el.classList.toggle("privacy-mode", isPrivacyMode);
 
   const count = document.createElement("div");
   count.className = "thumbCount";
@@ -298,8 +304,11 @@ function render() {
   // Check if opponent wants to show the top card of their library
   const showOppTop = opp.show_top;
   zoneThumb($("#oppLibrary"), opp.library, "Library", {showBack: !showOppTop});
-  zoneThumb($("#oppExile"),   opp.exile,   "Exile");
-  zoneThumb($("#oppGraveyard"), opp.graveyard, "Graveyard");
+  // Use privacy flags for graveyard and exile
+  const showOppExileTop = !opp.hide_exile_top;
+  const showOppGraveyardTop = !opp.hide_graveyard_top;
+  zoneThumb($("#oppExile"),   opp.exile,   "Exile", {showBack: !showOppExileTop});
+  zoneThumb($("#oppGraveyard"), opp.graveyard, "Graveyard", {showBack: !showOppGraveyardTop});
 
   const oppBF = $("#oppBattlefield"); clearZone(oppBF);
   opp.battlefield.forEach(cid => {
@@ -332,10 +341,12 @@ function render() {
   zoneThumb(lib, self.library, "Library", {showBack: !showMyTop, clickable:true});
 
   const exi = $("#myExile"); exi.dataset.zone = "exile";
-  zoneThumb(exi, self.exile, "Exile", {clickable:true});
+  const showMyExileTop = !self.hide_exile_top;
+  zoneThumb(exi, self.exile, "Exile", {showBack: !showMyExileTop, clickable:true});
 
   const gry = $("#myGraveyard"); gry.dataset.zone = "graveyard";
-  zoneThumb(gry, self.graveyard, "Graveyard", {clickable:true});
+  const showMyGraveyardTop = !self.hide_graveyard_top;
+  zoneThumb(gry, self.graveyard, "Graveyard", {showBack: !showMyGraveyardTop, clickable:true});
 
   const myBF = $("#myBattlefield"); clearZone(myBF);
   self.battlefield.forEach(cid => {
@@ -520,6 +531,19 @@ function wireZoneClicks() {
     el.addEventListener("dblclick", () => {
       const zone = el.id === "myExile" ? "exile" : "graveyard";
       sendAction("swap_zone_with_hand", { player_id: me.id, zone });
+    });
+  });
+
+  // Opponent zones: double-click to swap with my hand
+  ["oppLibrary", "oppExile", "oppGraveyard"].forEach(id => {
+    const el = $("#" + id);
+    el.addEventListener("dblclick", () => {
+      let zone;
+      if (id === "oppLibrary") zone = "library";
+      else if (id === "oppExile") zone = "exile";
+      else if (id === "oppGraveyard") zone = "graveyard";
+      
+      sendAction("swap_opponent_zone_with_hand", { player_id: me.id, zone });
     });
   });
 }

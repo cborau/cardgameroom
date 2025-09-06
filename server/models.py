@@ -27,6 +27,9 @@ class PlayerState(BaseModel):
     revealed_hand: bool = False
     show_hand: bool = False  # NEW: when True, hand is visible to opponents
     show_top: bool = False   # NEW: when True, top card of library is visible to all
+    # Privacy: zones that shouldn't show top card due to recent hand swaps
+    hide_graveyard_top: bool = False
+    hide_exile_top: bool = False  
     library: List[str] = Field(default_factory=list)
     hand: List[str] = Field(default_factory=list)
     battlefield: List[str] = Field(default_factory=list)

@@ -127,8 +127,56 @@ def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
         assert zone in ("graveyard","exile","library")
         pl = s.players[pid]
         other = getattr(pl, zone)
+        
+        # Toggle privacy flags for graveyard/exile
+        if zone == "graveyard":
+            if pl.hide_graveyard_top:
+                # Already hidden, turn privacy OFF
+                pl.hide_graveyard_top = False
+            elif len(pl.hand) > 0:
+                # Not hidden and hand has cards, turn privacy ON
+                pl.hide_graveyard_top = True
+        elif zone == "exile":
+            if pl.hide_exile_top:
+                # Already hidden, turn privacy OFF
+                pl.hide_exile_top = False
+            elif len(pl.hand) > 0:
+                # Not hidden and hand has cards, turn privacy ON
+                pl.hide_exile_top = True
+            
         pl.hand, other[:] = other[:], pl.hand[:]
         setattr(pl, zone, other)
+        return s
+    if action_type == "swap_opponent_zone_with_hand":
+        # Swap my hand with opponent's specified zone
+        my_pid = p["player_id"]
+        opp_pid = "B" if my_pid == "A" else "A"
+        zone = p["zone"]
+        assert zone in ("graveyard","exile","library")
+        
+        my_player = s.players[my_pid]
+        opp_player = s.players[opp_pid]
+        opp_zone = getattr(opp_player, zone)
+        
+        # Toggle privacy flags on opponent's zones
+        if zone == "graveyard":
+            if opp_player.hide_graveyard_top:
+                # Already hidden, turn privacy OFF
+                opp_player.hide_graveyard_top = False
+            elif len(my_player.hand) > 0:
+                # Not hidden and my hand has cards, turn privacy ON
+                opp_player.hide_graveyard_top = True
+        elif zone == "exile":
+            if opp_player.hide_exile_top:
+                # Already hidden, turn privacy OFF
+                opp_player.hide_exile_top = False
+            elif len(my_player.hand) > 0:
+                # Not hidden and my hand has cards, turn privacy ON
+                opp_player.hide_exile_top = True
+        
+        # Swap my hand with opponent's zone
+        my_player.hand, opp_zone[:] = opp_zone[:], my_player.hand[:]
+        setattr(opp_player, zone, opp_zone)
         return s
     if action_type == "set_card_pos":
         cid = p["card_id"]
