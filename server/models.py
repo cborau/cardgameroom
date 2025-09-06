@@ -25,8 +25,8 @@ class PlayerState(BaseModel):
     life: int = 20
     wins: int = 0
     revealed_hand: bool = False
-    show_hand: bool = False  # NEW: when True, hand is visible to opponents
-    show_top: bool = False   # NEW: when True, top card of library is visible to all
+    show_hand: bool = False  # when True, hand is visible to opponents
+    show_top: bool = False   # when True, top card of library is visible to all
     # Privacy: zones that shouldn't show top card due to recent hand swaps
     hide_graveyard_top: bool = False
     hide_exile_top: bool = False  

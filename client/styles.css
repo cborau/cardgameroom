@@ -37,6 +37,38 @@ header { padding:0.6rem 1rem; border-bottom:1px solid #222737; display:flex; ali
   opacity: 0.7;
 }
 
+/* Show hand active indicator */
+.zone.show-hand-active {
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 10px rgba(119, 204, 204, 0.5);
+  animation: show-hand-glow 2s ease-in-out infinite alternate;
+  position: relative;
+}
+.zone.show-hand-active::before {
+  content: "👁️ VISIBLE";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 10px;
+  background: var(--accent);
+  color: #000;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: bold;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Ensure zones have relative positioning for absolute positioned elements */
+.zone {
+  position: relative;
+}
+
+@keyframes show-hand-glow {
+  0% { box-shadow: 0 0 10px rgba(119, 204, 204, 0.3); }
+  100% { box-shadow: 0 0 15px rgba(119, 204, 204, 0.7); }
+}
+
 main { 
   padding:0.8rem; 
   display:grid; 

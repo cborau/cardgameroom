@@ -318,6 +318,10 @@ function render() {
   });
 
   const oppHand = $("#oppHand"); clearZone(oppHand);
+  // Add visual feedback if opponent is showing their hand
+  oppHand.classList.toggle("show-hand-active", opp.show_hand);
+  oppHand.dataset.zone = "hand";
+  
   // Check if opponent wants to show their hand
   if (opp.show_hand) {
     // Show actual cards in opponent's hand (but non-draggable)
@@ -356,6 +360,10 @@ function render() {
   });
 
   const myHand = $("#myHand"); clearZone(myHand);
+  // Add visual feedback if I'm showing my hand to others
+  myHand.classList.toggle("show-hand-active", self.show_hand);
+  myHand.dataset.zone = "hand";
+  
   self.hand.forEach(cid => myHand.appendChild(makeCardEl(cid, me.id || "A")));
 
   // Render my tokens
