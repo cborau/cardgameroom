@@ -57,14 +57,26 @@ def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
         return s
     if action_type == "move":
         pid = p["player_id"]; cid = p["card_id"]; to = p["to"]
-        pl = s.players[pid]
+        target_player = s.players[pid]
         zones = ["hand","battlefield","graveyard","exile","library"]
-        for z in zones:
-            arr = getattr(pl, z)
-            if cid in arr:
-                arr.remove(cid)
+        
+        # Find the card in ANY player's zones (not just the target player)
+        found_in_player = None
+        found_in_zone = None
+        for player_id, player in s.players.items():
+            for zone_name in zones:
+                zone_cards = getattr(player, zone_name)
+                if cid in zone_cards:
+                    found_in_player = player
+                    found_in_zone = zone_cards
+                    break
+            if found_in_player:
                 break
-        getattr(pl, to).append(cid)
+        
+        # Remove from current location and add to target
+        if found_in_zone is not None:
+            found_in_zone.remove(cid)
+            getattr(target_player, to).append(cid)
 
         # Position handling: only relevant on battlefield
         if to != "battlefield":
@@ -162,6 +174,14 @@ def apply_action(s: RoomState, action_type: str, p: dict) -> RoomState:
             pl.hand.remove(cid)
             # Put card at the bottom of library (beginning of the list since we pop from the end)
             pl.library.insert(0, cid)
+        return s
+    if action_type == "toggle_show_hand":
+        pid = p["player_id"]
+        s.players[pid].show_hand = not s.players[pid].show_hand
+        return s
+    if action_type == "toggle_show_top":
+        pid = p["player_id"]
+        s.players[pid].show_top = not s.players[pid].show_top
         return s
 
     return s

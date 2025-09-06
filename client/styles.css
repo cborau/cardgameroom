@@ -12,6 +12,16 @@ body { margin:0; font-family:system-ui,Segoe UI,Roboto,Arial; background:var(--b
 header { padding:0.6rem 1rem; border-bottom:1px solid #222737; display:flex; align-items:center; justify-content:space-between; gap:1rem; }
 .turn { color:var(--accent); }
 .controls button { margin-right:0.4rem; padding:0.4rem 0.7rem; border:1px solid #2a3246; background:#1b2030; color:var(--fg); border-radius:8px; cursor:pointer; }
+.controls button.active { background:var(--accent); border-color:var(--accent); color:#000; font-weight:bold; }
+
+/* Display-only cards (non-interactive) */
+.card.displayOnly {
+  cursor: default;
+  opacity: 0.8;
+}
+.card.displayOnly:hover {
+  transform: none;
+}
 
 main { 
   padding:0.8rem; 

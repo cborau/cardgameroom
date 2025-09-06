@@ -25,6 +25,8 @@ class PlayerState(BaseModel):
     life: int = 20
     wins: int = 0
     revealed_hand: bool = False
+    show_hand: bool = False  # NEW: when True, hand is visible to opponents
+    show_top: bool = False   # NEW: when True, top card of library is visible to all
     library: List[str] = Field(default_factory=list)
     hand: List[str] = Field(default_factory=list)
     battlefield: List[str] = Field(default_factory=list)

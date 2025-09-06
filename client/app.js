@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const key = e.key.toLowerCase();
     if (key === 'd') sendAction("draw", { player_id: me.id, n: 1 });
     if (key === 'p') sendAction("pass_turn", {});
+    if (key === 'h') sendAction("toggle_show_hand", { player_id: me.id });
+    if (key === 't') sendAction("toggle_show_top", { player_id: me.id });
     if (key === 'n') {
       // Next phase shortcut
       const phases = ["Untap","Upkeep","Draw","Main","Combat","Second Main","End"];
@@ -183,6 +185,39 @@ function makeCardEl(cid, ownerPid) {
   return el;
 }
 
+// Create a non-draggable display-only version of a card element
+function makeDisplayCardEl(cid) {
+  const c = state.cards[cid];
+  const el = document.createElement("div");
+  el.className = "card displayOnly";
+  // token styling: token_kind is 'creature' or 'chip'
+  if (c.is_token) {
+    el.classList.add("token", c.token_kind);
+  }
+  el.dataset.id = String(cid);
+  el.dataset.name = c.name || "";
+  el.title = c.name;
+  const label = document.createElement("div");
+  label.className = "label";
+  // for chip tokens, show text; else show name
+  label.textContent = (c.is_token && c.token_kind === 'chip') ? (c.text || c.name) : c.name;
+  el.appendChild(label);
+
+  const url = imgUrlFor(c);
+  if (url) {
+    el.style.backgroundImage = `url("${url}")`;
+    el.classList.add("hasImage");
+    el.ondblclick = () => showZoom(url);
+    el.addEventListener("wheel", e => { e.preventDefault(); showZoom(url); });
+  }
+  if (c.tapped) el.classList.add("tapped");
+
+  // NO drag functionality - this is display only
+  el.draggable = false;
+
+  return el;
+}
+
 // Apply absolute position from card state (used for battlefield)
 function applyCardPos(el, pos) {
   if (!el) return;
@@ -247,8 +282,22 @@ function render() {
   $("#lifeValA").textContent = self.life;
   $("#lifeB").textContent = `Life: ${opp.life}`;
 
+  // Update button states to show when features are active
+  const showHandBtn = document.getElementById("showHandBtn");
+  const showTopBtn = document.getElementById("showTopBtn");
+  if (showHandBtn) {
+    showHandBtn.textContent = self.show_hand ? "Hide Hand (H)" : "Show Hand (H)";
+    showHandBtn.classList.toggle("active", self.show_hand);
+  }
+  if (showTopBtn) {
+    showTopBtn.textContent = self.show_top ? "Hide Top (T)" : "Show Top (T)";
+    showTopBtn.classList.toggle("active", self.show_top);
+  }
+
   // Opponent zones
-  zoneThumb($("#oppLibrary"), opp.library, "Library", {showBack:true});
+  // Check if opponent wants to show the top card of their library
+  const showOppTop = opp.show_top;
+  zoneThumb($("#oppLibrary"), opp.library, "Library", {showBack: !showOppTop});
   zoneThumb($("#oppExile"),   opp.exile,   "Exile");
   zoneThumb($("#oppGraveyard"), opp.graveyard, "Graveyard");
 
@@ -260,15 +309,27 @@ function render() {
   });
 
   const oppHand = $("#oppHand"); clearZone(oppHand);
-  opp.hand.forEach(_cid => {
-    const el = document.createElement("div");
-    el.className = "card faceDown";
-    oppHand.appendChild(el);
-  });
+  // Check if opponent wants to show their hand
+  if (opp.show_hand) {
+    // Show actual cards in opponent's hand (but non-draggable)
+    opp.hand.forEach(cid => {
+      const el = makeDisplayCardEl(cid);
+      oppHand.appendChild(el);
+    });
+  } else {
+    // Show face-down cards as before
+    opp.hand.forEach(_cid => {
+      const el = document.createElement("div");
+      el.className = "card faceDown";
+      oppHand.appendChild(el);
+    });
+  }
 
   // My zones
   const lib = $("#myLibrary"); lib.dataset.zone = "library";
-  zoneThumb(lib, self.library, "Library", {showBack:true, clickable:true});
+  // Check if I want to show the top card of my library
+  const showMyTop = self.show_top;
+  zoneThumb(lib, self.library, "Library", {showBack: !showMyTop, clickable:true});
 
   const exi = $("#myExile"); exi.dataset.zone = "exile";
   zoneThumb(exi, self.exile, "Exile", {clickable:true});
@@ -323,7 +384,15 @@ function setupDnD() {
       try { data = JSON.parse(e.dataTransfer.getData("text/plain")); } catch {}
       if (!data) return;
       const to = zone.dataset.zone;
-      sendAction("move", { player_id: me.id, card_id: data.card_id, to });
+      
+      // Determine target player: if dropping on opponent's zone, use opponent's ID
+      let targetPlayerId = me.id; // default to my ID
+      if (zone.dataset.owner === "opponent") {
+        // This is an opponent's zone, so use opponent's ID
+        targetPlayerId = me.id === "A" ? "B" : "A";
+      }
+      
+      sendAction("move", { player_id: targetPlayerId, card_id: data.card_id, to });
       if (to === "battlefield") {
         // absolute pos logic
         const rect = zone.getBoundingClientRect();
@@ -410,6 +479,12 @@ function wireButtons() {
     const text = prompt('Marker token text', '+1/+1');
     if (!text) return;
     sendAction('create_token', { player_id: me.id, name: 'Marker', creature: false, text });
+  };
+  by('showHand').onclick = () => {
+    sendAction('toggle_show_hand', { player_id: me.id });
+  };
+  by('showTop').onclick = () => {
+    sendAction('toggle_show_top', { player_id: me.id });
   };
 
   // Handle life and wins controls for current player

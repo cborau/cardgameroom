@@ -39,6 +39,8 @@
         <button data-act="nextPhase">Next phase (N)</button>
         <button data-act="pass">Pass (P)</button>
         <button data-act="shuffle">Shuffle (S)</button>
+        <button data-act="showHand" id="showHandBtn">Show Hand (H)</button>
+        <button data-act="showTop" id="showTopBtn">Show Top (T)</button>
       </div>
     </header>
 
@@ -46,11 +48,11 @@
       <!-- Opponent (mirrored layout) -->
       <section class="playerArea" id="oppArea">
         <div class="grid3">
-          <div class="zone thumb" id="oppGraveyard"><span class="zoneLabel">Graveyard</span></div>
-          <div class="zone thumb" id="oppLibrary"><span class="zoneLabel">Library</span></div>
-          <div class="zone big" id="oppHand"><span class="zoneLabel">Hand</span></div>
+          <div class="zone thumb droptarget" data-zone="graveyard" data-owner="opponent" id="oppGraveyard"><span class="zoneLabel">Graveyard</span></div>
+          <div class="zone thumb droptarget" data-zone="library" data-owner="opponent" id="oppLibrary"><span class="zoneLabel">Library</span></div>
+          <div class="zone big droptarget" data-zone="hand" data-owner="opponent" id="oppHand"><span class="zoneLabel">Hand</span></div>
 
-          <div class="zone thumb" id="oppExile"><span class="zoneLabel">Exile</span></div>
+          <div class="zone thumb droptarget" data-zone="exile" data-owner="opponent" id="oppExile"><span class="zoneLabel">Exile</span></div>
           <div class="stack">
             <div class="info name" id="nameB"></div>
             <div class="info wins" id="winsB"></div>
@@ -63,7 +65,7 @@
               </div>
             </div>
           </div>
-          <div class="zone big" id="oppBattlefield"><span class="zoneLabel">Battlefield</span></div>
+          <div class="zone big droptarget" data-zone="battlefield" data-owner="opponent" id="oppBattlefield"><span class="zoneLabel">Battlefield</span></div>
         </div>
       </section>
 
